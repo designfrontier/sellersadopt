@@ -1,0 +1,91 @@
+# Deploy Cloudflare Workers (auth + uploads) on push to main.
+#
+# Required repository secrets (set in GitHub: Settings -> Secrets and variables -> Actions):
+#   - CLOUDFLARE_API_TOKEN  Cloudflare API token. Permissions:
+#                             * Account - Workers Scripts:Edit
+#                             * Account - Account Settings:Read
+#                             * Account - Workers R2 Storage:Edit  (uploads worker R2 binding)
+#                           Scope: only the sellersadopt.com account / zone.
+#   - CLOUDFLARE_ACCOUNT_ID Cloudflare account ID; consumed by wrangler.
+#
+# Worker runtime secrets (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, ALLOWED_GITHUB_USERS,
+# R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, etc.) are NOT set here; they are bound on
+# Cloudflare directly via `wrangler secret put` (Wave 3).
+#
+# To add a future Worker: drop it under workers/<name>/ with the standard
+# scripts (test, typecheck, deploy) and add its name to strategy.matrix.worker
+# plus a filter line in the paths-filter step.
+
+name: Deploy Workers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "workers/**"
+      - ".github/workflows/deploy-workers.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy ${{ matrix.worker }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        worker: [auth, uploads]
+    concurrency:
+      group: deploy-workers-${{ matrix.worker }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: workers/${{ matrix.worker }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Detect changed workers
+        id: changes
+        uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
+        with:
+          filters: |
+            auth:
+              - 'workers/auth/**'
+            uploads:
+              - 'workers/uploads/**'
+            workflow:
+              - '.github/workflows/deploy-workers.yml'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          # Cloudflare Workers' latest compatibility_date runs Node 22 (nodejs_compat).
+          # No engines.node is pinned in either workers/*/package.json, so we pin here.
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: workers/${{ matrix.worker }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Deploy
+        # Only deploy if this worker's files changed, OR the workflow itself changed
+        # (so a workflow tweak can force-redeploy via push), OR it's a manual dispatch.
+        if: >-
+          github.event_name == 'workflow_dispatch'
+          || steps.changes.outputs.workflow == 'true'
+          || (matrix.worker == 'auth' && steps.changes.outputs.auth == 'true')
+          || (matrix.worker == 'uploads' && steps.changes.outputs.uploads == 'true')
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
