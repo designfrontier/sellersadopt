@@ -1,0 +1,168 @@
+# Sveltia CMS configuration.
+#
+# Schema reference: https://sveltiacms.app/en/docs
+# Sveltia is config-compatible with Decap CMS, so Decap docs also apply:
+# https://decapcms.org/docs/configuration-options/
+#
+# Field shapes here MUST mirror site/src/content.config.ts exactly. If you
+# change one, change the other.
+
+backend:
+  name: github
+  # Update if repo is renamed or transferred.
+  repo: designfrontier/adoption
+  branch: main
+  # OAuth handshake is performed by the auth Worker (see workers/auth/).
+  # Sveltia/Decap appends `/auth` to base_url when opening the popup, which
+  # matches the Worker's route, so no `auth_endpoint` override is needed.
+  base_url: https://auth.sellersadopt.com
+
+# Direct commits to `main`. Editorial workflow (PR-based review) can be
+# enabled later by switching to `editorial_workflow`.
+publish_mode: simple
+
+# Site URLs surfaced inside the CMS UI (preview links, header logo).
+site_url: https://sellersadopt.com
+display_url: https://sellersadopt.com
+logo_url: /favicon.svg
+
+# ---------------------------------------------------------------------------
+# Media handling — Path A: native Sveltia Cloudflare R2 backend.
+#
+# Sveltia 0.157.1 ships first-class R2 support via `media_libraries.cloudflare_r2`
+# (verified in the published bundle: serviceId `cloudflare_r2`, with
+# access_key_id/bucket/account_id required, public_url for serving, and
+# secret_access_key entered through the CMS UI on first use and stored in the
+# editor's browser only — never written to this file).
+#
+# This means the upload flow is browser → R2 directly via the S3 API. Our
+# `workers/uploads/` presigning Worker is unused for now; it remains in the
+# repo as scaffolding in case we move to the presigned-URL flow later
+# (Sveltia Stage-2 backend-generated presigned URLs, or a security tightening).
+#
+# `media_folder` / `public_folder` are still required by Sveltia even when an
+# external library is in use — they control where in-content image references
+# resolve when an editor inserts an image into markdown. With R2, the image
+# widget returns the R2 `public_url`, so these settings mostly serve as a
+# fallback for the rare in-repo image (e.g. a static page hero committed by
+# an engineer).
+# ---------------------------------------------------------------------------
+
+media_folder: site/public/uploads
+public_folder: /uploads
+
+media_libraries:
+  cloudflare_r2:
+    # All four values below must match Wave 3 Cloudflare/R2 setup. They are
+    # safe to commit (R2 access_key_id is a public identifier; the secret
+    # access key is entered through the CMS UI by each editor on first use
+    # and stored only in the browser's local storage).
+    #
+    # Update when Wave 3 provisions the bucket and access key:
+    #   - account_id    matches workers/uploads/wrangler.toml's R2_ACCOUNT_ID
+    #   - bucket        matches workers/uploads/wrangler.toml's R2_BUCKET
+    #   - public_url    matches workers/uploads/wrangler.toml's PUBLIC_BASE_URL
+    #                   (e.g. https://uploads.sellersadopt.com)
+    #   - access_key_id is the *id* half of the R2 API token used for
+    #                   browser-side uploads. This can be the same token the
+    #                   Worker uses, or a separate token scoped to the same
+    #                   bucket. The matching SECRET key is entered into the
+    #                   CMS UI by each editor on first use, NOT committed here.
+    account_id: REPLACE_WITH_R2_ACCOUNT_ID
+    bucket: REPLACE_WITH_R2_BUCKET
+    public_url: https://uploads.sellersadopt.com
+    access_key_id: REPLACE_WITH_R2_ACCESS_KEY_ID
+    # Optional path prefix inside the bucket. Mirrors the YYYY/MM/... layout
+    # the uploads Worker would produce, but Sveltia's image widget will use
+    # its own filename, so we keep this as a flat `cms/` namespace to keep
+    # CMS-uploaded media separate from anything the Worker might write later.
+    prefix: cms/
+
+collections:
+  - name: pages
+    label: Marketing pages
+    folder: site/src/content/pages
+    create: true
+    slug: '{{slug}}'
+    fields:
+      - { name: title, label: Title, widget: string }
+      - {
+          name: order,
+          label: Order,
+          widget: number,
+          default: 100,
+          value_type: int,
+          step: 1,
+        }
+      - { name: summary, label: Summary, widget: text, required: false }
+      - { name: hero, label: Hero image, widget: image, required: false }
+      - { name: body, label: Body, widget: markdown }
+
+  - name: family
+    label: Family members
+    folder: site/src/content/family
+    create: true
+    slug: '{{slug}}'
+    fields:
+      - { name: name, label: Name, widget: string }
+      - name: role
+        label: Role
+        widget: select
+        options: [parent, child, pet]
+      - {
+          name: age,
+          label: Age,
+          widget: number,
+          required: false,
+          value_type: int,
+          step: 1,
+        }
+      - {
+          name: traits,
+          label: Traits,
+          widget: string,
+          hint: "One-line description (e.g., 'Mom, music teacher')",
+        }
+      - { name: photo, label: Photo, widget: image, required: false }
+      - { name: order, label: Order, widget: number, value_type: int, step: 1 }
+      - { name: body, label: Bio, widget: markdown }
+
+  - name: gallery
+    label: Photo gallery
+    folder: site/src/content/gallery
+    create: true
+    slug: '{{slug}}'
+    fields:
+      - { name: title, label: Title, widget: string }
+      - { name: image, label: Image, widget: image }
+      - {
+          name: alt,
+          label: Alt text,
+          widget: string,
+          hint: Required for accessibility,
+        }
+      - { name: caption, label: Caption, widget: text, required: false }
+      - {
+          name: takenAt,
+          label: Taken at,
+          widget: datetime,
+          required: false,
+          format: yyyy-MM-dd,
+        }
+      - name: season
+        label: Season
+        widget: select
+        required: false
+        options: [spring, summer, fall, winter]
+
+  - name: blog
+    label: Blog / journal
+    folder: site/src/content/blog
+    create: true
+    slug: '{{year}}-{{month}}-{{day}}-{{slug}}'
+    fields:
+      - { name: title, label: Title, widget: string }
+      - { name: date, label: Date, widget: datetime }
+      - { name: summary, label: Summary, widget: text, required: false }
+      - { name: hero, label: Hero image, widget: image, required: false }
+      - { name: body, label: Body, widget: markdown }
