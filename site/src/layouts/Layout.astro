@@ -1,0 +1,85 @@
+---
+import '../styles/global.css'
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "The Sellers Family | Hoping to Adopt",
+  description = "Meet Daniel, Katie, and their two kids. We're a family in Holladay, Utah hoping to grow through open adoption."
+} = Astro.props;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+    <title>{title}</title>
+  </head>
+  <body class="bg-warm-50 text-warm-900 font-sans">
+    <nav class="sticky top-0 z-50 bg-warm-50/90 backdrop-blur-sm border-b border-warm-200">
+      <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+        <a href="/" class="font-serif text-xl font-semibold text-warm-800 hover:text-warm-600 transition-colors">
+          The Sellers Family
+        </a>
+        <div class="hidden md:flex gap-6 text-sm font-medium">
+          <a href="/" class="text-warm-600 hover:text-warm-800 transition-colors">Home</a>
+          <a href="/about" class="text-warm-600 hover:text-warm-800 transition-colors">About Us</a>
+          <a href="/our-home" class="text-warm-600 hover:text-warm-800 transition-colors">Our Home</a>
+          <a href="/letter" class="text-warm-600 hover:text-warm-800 transition-colors">Our Letter</a>
+          <a href="/pictures" class="text-warm-600 hover:text-warm-800 transition-colors">Pictures</a>
+          <a href="/blog" class="text-warm-600 hover:text-warm-800 transition-colors">Blog</a>
+          <a href="/contact" class="text-warm-600 hover:text-warm-800 transition-colors">Contact</a>
+        </div>
+        <button id="mobile-menu-btn" class="md:hidden p-2 text-warm-600" aria-label="Open menu">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+      <div id="mobile-menu" class="hidden md:hidden border-t border-warm-200 bg-warm-50">
+        <div class="px-4 py-3 flex flex-col gap-3 text-sm font-medium">
+          <a href="/" class="text-warm-600 hover:text-warm-800 py-1">Home</a>
+          <a href="/about" class="text-warm-600 hover:text-warm-800 py-1">About Us</a>
+          <a href="/our-home" class="text-warm-600 hover:text-warm-800 py-1">Our Home</a>
+          <a href="/letter" class="text-warm-600 hover:text-warm-800 py-1">Our Letter</a>
+          <a href="/pictures" class="text-warm-600 hover:text-warm-800 py-1">Pictures</a>
+          <a href="/blog" class="text-warm-600 hover:text-warm-800 py-1">Blog</a>
+          <a href="/contact" class="text-warm-600 hover:text-warm-800 py-1">Contact</a>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="bg-warm-100 border-t border-warm-200 mt-16">
+      <div class="max-w-5xl mx-auto px-4 py-8 text-center text-sm text-warm-600">
+        <p class="font-serif text-lg text-warm-700 mb-2">The Sellers Family</p>
+        <p>Holladay, Utah</p>
+        <p class="mt-2">
+          <a href="/contact" class="text-sage-600 hover:text-sage-700 underline">Get in touch</a>
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      const btn = document.getElementById('mobile-menu-btn');
+      const menu = document.getElementById('mobile-menu');
+      btn?.addEventListener('click', () => {
+        menu?.classList.toggle('hidden');
+      });
+    </script>
+  </body>
+</html>
