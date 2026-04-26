@@ -1,91 +1,36 @@
 ---
+import { getEntry, render } from 'astro:content';
+import { Image } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
+
+const entry = await getEntry('pages', 'our-home');
+if (!entry) {
+  throw new Error('Missing required content entry: pages/our-home');
+}
+const { Content } = await render(entry);
 ---
 
-<Layout title="Our Home & Community | The Sellers Family" description="See where we live in Holladay, Utah — our home, neighborhood, and community.">
-  <section class="max-w-4xl mx-auto px-4 py-16">
-    <h1 class="font-serif text-3xl md:text-4xl text-warm-800 mb-4 text-center">
-      Our Home & Community
+<Layout
+  title={`${entry.data.title} | The Sellers Family`}
+  description={entry.data.summary ?? 'See where we live in Holladay, Utah — our home, neighborhood, and community.'}
+>
+  <section class="max-w-3xl mx-auto px-4 py-16">
+    <h1 class="font-serif text-3xl md:text-4xl text-warm-800 mb-8 text-center">
+      {entry.data.title}
     </h1>
-    <p class="text-warm-600 text-center max-w-2xl mx-auto mb-12">
-      We live in Holladay, Utah — a family-friendly community nestled
-      against the Wasatch Mountains with great schools, parks, and neighbors.
-    </p>
 
-    <!-- Home Photos -->
-    <div class="grid md:grid-cols-2 gap-6 mb-16">
-      <div class="aspect-[4/3] bg-warm-200 rounded-2xl flex items-center justify-center text-warm-400 text-sm">
-        Front of house
+    {entry.data.hero && (
+      <div class="mb-10">
+        <Image
+          src={entry.data.hero}
+          alt={entry.data.title}
+          class="w-full h-auto rounded-2xl"
+        />
       </div>
-      <div class="aspect-[4/3] bg-warm-200 rounded-2xl flex items-center justify-center text-warm-400 text-sm">
-        Backyard
-      </div>
-      <div class="aspect-[4/3] bg-warm-200 rounded-2xl flex items-center justify-center text-warm-400 text-sm">
-        Living room / family room
-      </div>
-      <div class="aspect-[4/3] bg-warm-200 rounded-2xl flex items-center justify-center text-warm-400 text-sm">
-        Kitchen
-      </div>
-    </div>
+    )}
 
-    <!-- What we love -->
-    <div class="max-w-3xl mx-auto mb-16">
-      <h2 class="font-serif text-2xl text-warm-800 mb-6">What we love about our home</h2>
-      <p class="text-warm-700 leading-relaxed mb-4">
-        <!-- TODO: What do you love about your home? What does it feel like? -->
-        [What you love about your home — to be filled in]
-      </p>
-    </div>
-
-    <!-- Holladay / Community -->
-    <div class="bg-sage-50 rounded-2xl p-8 md:p-12 mb-16">
-      <h2 class="font-serif text-2xl text-warm-800 mb-6">Life in Holladay</h2>
-      <div class="grid md:grid-cols-2 gap-8">
-        <div>
-          <h3 class="font-semibold text-warm-800 mb-2">Outdoors</h3>
-          <p class="text-warm-700 text-sm leading-relaxed">
-            The Wasatch Mountains are in our backyard. We hike, ski,
-            and spend as much time outside as we can. The kids love
-            exploring the canyons and trails nearby.
-          </p>
-        </div>
-        <div>
-          <h3 class="font-semibold text-warm-800 mb-2">Schools</h3>
-          <p class="text-warm-700 text-sm leading-relaxed">
-            <!-- TODO: What can you share about schools nearby? (Don't name specific schools for privacy) -->
-            Our area has excellent schools with involved parents and
-            dedicated teachers. [More detail — to be filled in]
-          </p>
-        </div>
-        <div>
-          <h3 class="font-semibold text-warm-800 mb-2">Community</h3>
-          <p class="text-warm-700 text-sm leading-relaxed">
-            <!-- TODO: What's your community like? Neighbors, ward, local activities? -->
-            [About your community — to be filled in]
-          </p>
-        </div>
-        <div>
-          <h3 class="font-semibold text-warm-800 mb-2">Family fun</h3>
-          <p class="text-warm-700 text-sm leading-relaxed">
-            <!-- TODO: What do you do for fun as a family in the area? -->
-            [Family activities — to be filled in]
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Neighborhood gallery -->
-    <div>
-      <h2 class="font-serif text-2xl text-warm-800 mb-6 text-center">Our neighborhood</h2>
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <!-- TODO: Add photos of parks, mountains, local spots — no specific addresses or school names -->
-        <div class="aspect-square bg-warm-200 rounded-xl flex items-center justify-center text-warm-400 text-xs">Local park</div>
-        <div class="aspect-square bg-warm-200 rounded-xl flex items-center justify-center text-warm-400 text-xs">Mountains</div>
-        <div class="aspect-square bg-warm-200 rounded-xl flex items-center justify-center text-warm-400 text-xs">Seasonal activity</div>
-        <div class="aspect-square bg-warm-200 rounded-xl flex items-center justify-center text-warm-400 text-xs">Family outing spot</div>
-        <div class="aspect-square bg-warm-200 rounded-xl flex items-center justify-center text-warm-400 text-xs">Community event</div>
-        <div class="aspect-square bg-warm-200 rounded-xl flex items-center justify-center text-warm-400 text-xs">Winter in Utah</div>
-      </div>
+    <div class="prose prose-warm max-w-none text-warm-700 leading-relaxed">
+      <Content />
     </div>
   </section>
 </Layout>

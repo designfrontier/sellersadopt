@@ -1,0 +1,66 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
+import Layout from '../../layouts/Layout.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post },
+  }));
+}
+
+interface Props {
+  post: CollectionEntry<'blog'>;
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+
+const dateFmt = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+---
+
+<Layout
+  title={`${post.data.title} | The Sellers Family`}
+  description={post.data.summary ?? 'A post from the Sellers family adoption journey.'}
+>
+  <article class="max-w-3xl mx-auto px-4 py-16">
+    <a
+      href="/blog"
+      class="inline-block text-sage-600 hover:text-sage-700 text-sm mb-6"
+    >
+      &larr; Back to all posts
+    </a>
+
+    <header class="mb-10">
+      <time class="text-warm-400 text-sm" datetime={post.data.date.toISOString()}>
+        {dateFmt.format(post.data.date)}
+      </time>
+      <h1 class="font-serif text-3xl md:text-4xl text-warm-800 mt-2 mb-4">
+        {post.data.title}
+      </h1>
+      {post.data.summary && (
+        <p class="text-warm-600 leading-relaxed">{post.data.summary}</p>
+      )}
+    </header>
+
+    {post.data.hero && (
+      <div class="mb-10">
+        <Image
+          src={post.data.hero}
+          alt={post.data.title}
+          class="w-full h-auto rounded-2xl"
+        />
+      </div>
+    )}
+
+    <div class="prose prose-warm max-w-none text-warm-700 leading-relaxed">
+      <Content />
+    </div>
+  </article>
+</Layout>

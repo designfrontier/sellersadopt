@@ -1,8 +1,22 @@
 ---
+import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
+
+const posts = (await getCollection('blog')).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+
+const dateFmt = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
 ---
 
-<Layout title="Blog | The Sellers Family" description="Updates from the Sellers family on our adoption journey.">
+<Layout
+  title="Blog | The Sellers Family"
+  description="Updates from the Sellers family on our adoption journey."
+>
   <section class="max-w-3xl mx-auto px-4 py-16">
     <h1 class="font-serif text-3xl md:text-4xl text-warm-800 mb-4 text-center">
       Our Journey
@@ -12,36 +26,37 @@ import Layout from '../layouts/Layout.astro';
       grow through adoption.
     </p>
 
-    <!-- Blog posts — newest first -->
-    <div class="space-y-12">
-
-      <!-- First post template -->
-      <article class="border-b border-warm-200 pb-12">
-        <time class="text-warm-400 text-sm">March 2026</time>
-        <h2 class="font-serif text-2xl text-warm-800 mt-2 mb-4">
-          Why we're choosing adoption
-        </h2>
-        <p class="text-warm-700 leading-relaxed mb-3">
-          <!-- TODO: Write your first blog post. This is a great place to share
-               your "why" in a more personal, longer-form way than the letter.
-               Think of it as a journal entry, not an essay. -->
-          [Your first post — to be filled in]
-        </p>
-      </article>
-
-      <!-- Future posts go here, newest on top -->
-      <!--
-      <article class="border-b border-warm-200 pb-12">
-        <time class="text-warm-400 text-sm">Month Year</time>
-        <h2 class="font-serif text-2xl text-warm-800 mt-2 mb-4">
-          Post title
-        </h2>
-        <p class="text-warm-700 leading-relaxed mb-3">
-          Post content
-        </p>
-      </article>
-      -->
-
-    </div>
+    {posts.length === 0 ? (
+      <p class="text-warm-600 text-center">No posts yet — check back soon.</p>
+    ) : (
+      <div class="space-y-12">
+        {posts.map((post) => (
+          <article class="border-b border-warm-200 pb-12">
+            <time class="text-warm-400 text-sm" datetime={post.data.date.toISOString()}>
+              {dateFmt.format(post.data.date)}
+            </time>
+            <h2 class="font-serif text-2xl text-warm-800 mt-2 mb-4">
+              <a
+                href={`/blog/${post.id}`}
+                class="hover:text-sage-700 transition-colors"
+              >
+                {post.data.title}
+              </a>
+            </h2>
+            {post.data.summary && (
+              <p class="text-warm-700 leading-relaxed mb-3">
+                {post.data.summary}
+              </p>
+            )}
+            <a
+              href={`/blog/${post.id}`}
+              class="text-sage-600 font-medium hover:text-sage-700 transition-colors"
+            >
+              Read more &rarr;
+            </a>
+          </article>
+        ))}
+      </div>
+    )}
   </section>
 </Layout>

@@ -1,5 +1,16 @@
 ---
+import { getCollection } from 'astro:content';
+import { Image } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
+
+// Family-at-a-glance cards: pulled from the `family` collection,
+// sorted by `order`. Hero/intro/openness copy stays inline (decision:
+// homepage marketing copy is short and tightly tied to layout, so
+// moving it into `pages` entries was deemed not worth the extra
+// indirection for a 1-page site).
+const family = (await getCollection('family')).sort(
+  (a, b) => a.data.order - b.data.order,
+);
 ---
 
 <Layout>
@@ -55,33 +66,30 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
-  <!-- Family at a glance -->
+  <!-- Family at a glance — driven by the `family` content collection -->
   <section class="bg-warm-100 py-16">
     <div class="max-w-4xl mx-auto px-4">
       <h2 class="font-serif text-2xl md:text-3xl text-warm-800 mb-8 text-center">
         Our family at a glance
       </h2>
       <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="bg-white rounded-xl p-6 text-center">
-          <div class="w-20 h-20 rounded-full bg-sage-100 mx-auto mb-3 flex items-center justify-center text-sage-400 text-xs">Photo</div>
-          <h3 class="font-serif text-lg text-warm-800">Daniel</h3>
-          <p class="text-sm text-warm-600 mt-1">Dad, builder of things, cyclist, banjo picker</p>
-        </div>
-        <div class="bg-white rounded-xl p-6 text-center">
-          <div class="w-20 h-20 rounded-full bg-sage-100 mx-auto mb-3 flex items-center justify-center text-sage-400 text-xs">Photo</div>
-          <h3 class="font-serif text-lg text-warm-800">Katie</h3>
-          <p class="text-sm text-warm-600 mt-1">Mom, music teacher, singer-songwriter</p>
-        </div>
-        <div class="bg-white rounded-xl p-6 text-center">
-          <div class="w-20 h-20 rounded-full bg-sage-100 mx-auto mb-3 flex items-center justify-center text-sage-400 text-xs">Photo</div>
-          <h3 class="font-serif text-lg text-warm-800">E</h3>
-          <p class="text-sm text-warm-600 mt-1">Big sister (10), [interests]</p>
-        </div>
-        <div class="bg-white rounded-xl p-6 text-center">
-          <div class="w-20 h-20 rounded-full bg-sage-100 mx-auto mb-3 flex items-center justify-center text-sage-400 text-xs">Photo</div>
-          <h3 class="font-serif text-lg text-warm-800">C</h3>
-          <p class="text-sm text-warm-600 mt-1">Little brother (6), [interests]</p>
-        </div>
+        {family.map((member) => (
+          <div class="bg-white rounded-xl p-6 text-center">
+            {member.data.photo ? (
+              <Image
+                src={member.data.photo}
+                alt={`Photo of ${member.data.name}`}
+                class="w-20 h-20 rounded-full mx-auto mb-3 object-cover"
+              />
+            ) : (
+              <div class="w-20 h-20 rounded-full bg-sage-100 mx-auto mb-3 flex items-center justify-center text-sage-400 text-xs">
+                Photo
+              </div>
+            )}
+            <h3 class="font-serif text-lg text-warm-800">{member.data.name}</h3>
+            <p class="text-sm text-warm-600 mt-1">{member.data.traits}</p>
+          </div>
+        ))}
       </div>
     </div>
   </section>
@@ -102,7 +110,7 @@ import Layout from '../layouts/Layout.astro';
     </a>
   </section>
 
-  <!-- Contact CTA — info directly on homepage -->
+  <!-- Contact CTA — info directly on homepage (real contact details, kept static) -->
   <section class="bg-sage-50 py-16">
     <div class="max-w-3xl mx-auto px-4 text-center">
       <h2 class="font-serif text-2xl md:text-3xl text-warm-800 mb-4">
