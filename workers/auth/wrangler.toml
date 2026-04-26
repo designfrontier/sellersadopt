@@ -1,0 +1,20 @@
+name = "sellers-auth"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+
+# ---------------------------------------------------------------------------
+# Required runtime configuration
+#
+# Secrets (set via `wrangler secret put <NAME>` in production, or `.dev.vars`
+# in local dev — see README.md):
+#   GITHUB_CLIENT_ID     – the GitHub OAuth App's client ID
+#   GITHUB_CLIENT_SECRET – the GitHub OAuth App's client secret
+#
+# Plain vars (configured below or in the Cloudflare dashboard):
+#   ALLOWED_GITHUB_USERS – comma-separated list of GitHub usernames that are
+#                          allowed to log in to Sveltia/Decap. Compared
+#                          case-insensitively after trimming whitespace.
+# ---------------------------------------------------------------------------
+
+[vars]
+ALLOWED_GITHUB_USERS = ""

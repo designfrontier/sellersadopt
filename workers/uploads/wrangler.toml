@@ -1,0 +1,33 @@
+name = "sellers-uploads"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+
+# ---------------------------------------------------------------------------
+# Required secrets (set with `wrangler secret put <NAME>`):
+#   R2_ACCESS_KEY_ID      — R2 API token access key id (S3-compatible)
+#   R2_SECRET_ACCESS_KEY  — R2 API token secret
+#
+# Required vars (set under [vars] below or in the CF dashboard):
+#   R2_ACCOUNT_ID         — Cloudflare account id, used to build the R2
+#                           endpoint host: <account>.r2.cloudflarestorage.com
+#   R2_BUCKET             — bucket name in R2 (no leading/trailing slashes)
+#   ALLOWED_GITHUB_USERS  — comma-separated list of github logins permitted
+#                           to request a presigned upload URL (e.g.
+#                           "designfrontier,kksellers"). Compared
+#                           case-insensitively against the GitHub user.
+#   PUBLIC_BASE_URL       — public URL prefix that R2 objects are served
+#                           from once uploaded, e.g.
+#                           "https://uploads.sellersadopt.com". Used to build
+#                           the `publicUrl` field returned to the client.
+#   ALLOWED_ORIGINS       — comma-separated list of origins permitted via
+#                           CORS, e.g. "https://sellersadopt.com,
+#                           http://localhost:4321". Compared exactly
+#                           (no wildcards) against the request `Origin` header.
+# ---------------------------------------------------------------------------
+
+[vars]
+R2_ACCOUNT_ID = ""
+R2_BUCKET = ""
+ALLOWED_GITHUB_USERS = ""
+PUBLIC_BASE_URL = ""
+ALLOWED_ORIGINS = ""
