@@ -1,72 +1,32 @@
 ---
+import { getEntry, render } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
+
+const entry = await getEntry('pages', 'letter');
+if (!entry) {
+  throw new Error('Missing required content entry: pages/letter');
+}
+const { Content } = await render(entry);
 ---
 
-<Layout title="Our Letter to You | The Sellers Family" description="A personal letter from Daniel and Katie Sellers to expectant parents considering adoption.">
+<Layout
+  title={`${entry.data.title} | The Sellers Family`}
+  description={entry.data.summary ?? 'A personal letter from Daniel and Katie Sellers to expectant parents considering adoption.'}
+>
   <section class="max-w-3xl mx-auto px-4 py-16">
     <h1 class="font-serif text-3xl md:text-4xl text-warm-800 mb-8 text-center">
-      Our Letter to You
+      {entry.data.title}
     </h1>
 
-    <div class="bg-white rounded-2xl shadow-sm p-8 md:p-12 font-serif text-warm-800 leading-relaxed">
-      <p class="text-lg mb-6">Dear Friend,</p>
-
-      <!-- OPENING: Acknowledge their courage, express gratitude -->
-      <p class="mb-4">
-        Thank you for taking the time to read this. We know you are making
-        one of the most important decisions of your life, and we want you to
-        know that we see you, we respect you, and we honor whatever path you
-        choose.
-      </p>
-
-      <!-- WHO WE ARE: Brief intro -->
-      <p class="mb-4">
-        <!-- TODO: 2-3 sentences about your family. Who you are, your vibe. -->
-        [Brief family introduction — to be filled in]
-      </p>
-
-      <!-- WHY ADOPTION: Honest explanation -->
-      <p class="mb-4">
-        <!-- TODO: Why are you choosing adoption? Be honest and brief. -->
-        [Your reason for choosing adoption — to be filled in]
-      </p>
-
-      <!-- WHAT LIFE LOOKS LIKE: Paint a picture -->
-      <p class="mb-4">
-        <!-- TODO: What would a day, a week, a holiday look like for this child in your home? Be specific and sensory. Saturday mornings, bedtime routines, holiday traditions. -->
-        [A picture of daily life — to be filled in]
-      </p>
-
-      <!-- YOUR KIDS AS SIBLINGS -->
-      <p class="mb-4">
-        <!-- TODO: How do E and C feel about a new sibling? What kind of siblings would they be? -->
-        E and C are so ready for this. [More about your kids' excitement — to be filled in]
-      </p>
-
-      <!-- OPEN ADOPTION COMMITMENT -->
-      <p class="mb-4">
-        We believe in open adoption — not as an obligation, but as a gift
-        to your child and to you. We want you to be part of this child's
-        story, always. That means photos, updates, calls, and visits — as
-        much or as little as feels right for you.
-        <!-- TODO: Adjust this to reflect your actual comfort level with openness -->
-      </p>
-
-      <!-- CLOSING -->
-      <p class="mb-4">
-        Whatever you decide, we want you to know: you are brave, you are
-        loved, and your child is lucky to have a parent who cares this much
-        about their future.
-      </p>
-
-      <p class="mt-8">
-        With love and hope,<br />
-        <span class="font-semibold">Daniel, Katie, E & C Sellers</span>
-      </p>
+    <div class="bg-white rounded-2xl shadow-sm p-8 md:p-12 font-serif text-warm-800 leading-relaxed prose prose-warm max-w-none">
+      <Content />
     </div>
 
     <div class="text-center mt-8">
-      <a href="/contact" class="inline-block px-6 py-3 bg-sage-600 text-white rounded-lg font-medium hover:bg-sage-700 transition-colors">
+      <a
+        href="/contact"
+        class="inline-block px-6 py-3 bg-sage-600 text-white rounded-lg font-medium hover:bg-sage-700 transition-colors"
+      >
         Get in Touch
       </a>
     </div>

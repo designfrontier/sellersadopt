@@ -57,4 +57,19 @@ const gallery = defineCollection({
     }),
 });
 
-export const collections = { pages, family, gallery };
+/**
+ * Blog posts. Body is markdown. Sorted by `date` desc on the index page.
+ * `hero` is optional — empty hero just renders a heading + body.
+ */
+const blog = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/blog' }),
+  schema: ({ image }) =>
+    z.object({
+      title: z.string(),
+      date: z.coerce.date(),
+      summary: z.string().optional(),
+      hero: image().optional(),
+    }),
+});
+
+export const collections = { pages, family, gallery, blog };
