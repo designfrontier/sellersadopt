@@ -24,6 +24,11 @@ Sveltia/Decap opens this Worker in a popup at
 
 ## Required configuration
 
+> **GitHub OAuth App callback URL:** the OAuth App's "Authorization callback
+> URL" must exactly match `https://auth.sellersadopt.com/callback` in
+> production (and the matching local URL during `wrangler dev`). GitHub will
+> reject the token exchange with `redirect_uri_mismatch` if it differs.
+
 Secrets (set with `wrangler secret put …` in production, or in a local
 `.dev.vars` file for `wrangler dev`):
 

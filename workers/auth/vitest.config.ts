@@ -1,17 +1,19 @@
-import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineConfig } from "vitest/config";
 
-export default defineWorkersConfig({
-  test: {
-    poolOptions: {
-      workers: {
-        // The Worker has no bindings yet; tests stub `fetch` and pass `env`
-        // explicitly to the handler, so an empty wrangler config is fine.
-        miniflare: {
-          compatibilityDate: "2024-12-30",
-          compatibilityFlags: ["nodejs_compat"],
-        },
+export default defineConfig({
+  plugins: [
+    cloudflareTest({
+      wrangler: { configPath: "./wrangler.toml" },
+      // The Worker has no bindings yet; tests stub `fetch` and pass `env`
+      // explicitly to the handler, so an empty miniflare config is fine.
+      miniflare: {
+        compatibilityDate: "2026-04-01",
+        compatibilityFlags: ["nodejs_compat"],
       },
-    },
+    }),
+  ],
+  test: {
     coverage: {
       // istanbul, not v8: the @cloudflare/vitest-pool-workers runtime
       // (workerd) doesn't expose `node:inspector`, which v8 coverage needs.

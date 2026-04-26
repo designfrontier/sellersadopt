@@ -1,3 +1,4 @@
+/// <reference types="@cloudflare/vitest-pool-workers/types" />
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker, { type Env } from "./index";
 
@@ -157,7 +158,7 @@ describe("GET /callback", () => {
     expect(body).toContain('authorization:github:error:{"message":"User not authorized"}');
   });
 
-  it("returns 400 when state does not match the cookie", async () => {
+  it("returns 400 with error postMessage when state does not match the cookie", async () => {
     const fetchMock = mockGithub({});
 
     const res = await callWorker(
@@ -168,20 +169,32 @@ describe("GET /callback", () => {
 
     expect(res.status).toBe(400);
     expect(fetchMock).not.toHaveBeenCalled();
+    const body = await res.text();
+    expect(body).toContain("authorization:github:error:");
+    expect(body).toContain("window.opener.postMessage");
+    expect(body).toContain('"message":"State mismatch"');
   });
 
-  it("returns 400 when state cookie is missing entirely", async () => {
+  it("returns 400 with error postMessage when state cookie is missing entirely", async () => {
     const res = await callWorker(makeRequest("/callback?code=abc&state=s1"));
     expect(res.status).toBe(400);
+    const body = await res.text();
+    expect(body).toContain("authorization:github:error:");
+    expect(body).toContain("window.opener.postMessage");
+    expect(body).toContain('"message":"State mismatch"');
   });
 
-  it("returns 400 when code is missing", async () => {
+  it("returns 400 with error postMessage when code is missing", async () => {
     const res = await callWorker(
       makeRequest("/callback?state=s1", {
         headers: { cookie: "__sellers_oauth_state=s1" },
       })
     );
     expect(res.status).toBe(400);
+    const body = await res.text();
+    expect(body).toContain("authorization:github:error:");
+    expect(body).toContain("window.opener.postMessage");
+    expect(body).toContain('"message":"Missing code"');
   });
 
   it("returns error postMessage page when GitHub responds with an OAuth error", async () => {
@@ -222,7 +235,9 @@ describe("GET /callback", () => {
     expect(body).toContain("No access_token");
   });
 
-  it("returns 500 error page when token endpoint is non-2xx", async () => {
+  it("returns 500 error page when token endpoint is non-2xx (without leaking GitHub status)", async () => {
+    // Suppress the console.error we now emit on token-exchange failure.
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockGithub({
       token: () => new Response("server error", { status: 500 }),
     });
@@ -236,10 +251,38 @@ describe("GET /callback", () => {
     expect(res.status).toBe(500);
     const body = await res.text();
     expect(body).toContain("authorization:github:error:");
-    expect(body).toContain("GitHub token endpoint returned 500");
+    expect(body).toContain("GitHub authentication failed");
+    // Ensure we do NOT leak the upstream HTTP status into the popup message.
+    expect(body).not.toContain("returned 500");
+    expect(errSpy).toHaveBeenCalled();
+  });
+
+  it("returns 500 error page when fetch to GitHub token endpoint rejects (network failure)", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // fetch() rejects (e.g. DNS / TLS / abort) rather than returning a Response.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("ECONNRESET");
+      })
+    );
+
+    const res = await callWorker(
+      makeRequest("/callback?code=abc&state=s1", {
+        headers: { cookie: "__sellers_oauth_state=s1" },
+      })
+    );
+
+    expect(res.status).toBe(500);
+    const body = await res.text();
+    expect(body).toContain("authorization:github:error:");
+    expect(body).toContain("window.opener.postMessage");
+    expect(body).toContain('"message":"GitHub authentication failed"');
+    expect(errSpy).toHaveBeenCalled();
   });
 
   it("returns 500 error page when GitHub user endpoint fails", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockGithub({
       token: () => jsonResponse({ access_token: "gho_x" }),
       user: () => new Response("nope", { status: 401 }),
@@ -253,10 +296,13 @@ describe("GET /callback", () => {
 
     expect(res.status).toBe(500);
     const body = await res.text();
-    expect(body).toContain("GitHub user endpoint returned 401");
+    expect(body).toContain("GitHub authentication failed");
+    expect(body).not.toContain("returned 401");
+    expect(errSpy).toHaveBeenCalled();
   });
 
   it("returns 500 error page when user response has no login", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockGithub({
       token: () => jsonResponse({ access_token: "gho_x" }),
       user: () => jsonResponse({ id: 42 }),
@@ -270,7 +316,21 @@ describe("GET /callback", () => {
 
     expect(res.status).toBe(500);
     const body = await res.text();
-    expect(body).toContain("login");
+    expect(body).toContain("GitHub authentication failed");
+    expect(errSpy).toHaveBeenCalled();
+  });
+
+  it("clears the state cookie on error responses", async () => {
+    const res = await callWorker(
+      makeRequest("/callback?code=abc&state=mismatch", {
+        headers: { cookie: "__sellers_oauth_state=other" },
+      })
+    );
+    expect(res.status).toBe(400);
+    const setCookie = res.headers.get("Set-Cookie");
+    expect(setCookie).toBeTruthy();
+    expect(setCookie).toContain("__sellers_oauth_state=");
+    expect(setCookie).toContain("Max-Age=0");
   });
 
   it("rejects everyone when ALLOWED_GITHUB_USERS is empty", async () => {

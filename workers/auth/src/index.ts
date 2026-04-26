@@ -42,10 +42,19 @@ export default {
   },
 };
 
+/**
+ * Build the OAuth `redirect_uri` from the incoming request. We rebuild this in
+ * two places (the `/auth` redirect and the token exchange in `/callback`); they
+ * MUST agree exactly or GitHub rejects the token exchange with
+ * `redirect_uri_mismatch`. Centralising guarantees they always match.
+ */
+function getRedirectUri(request: Request): string {
+  return `${new URL(request.url).origin}/callback`;
+}
+
 async function handleAuth(request: Request, env: Env): Promise<Response> {
-  const requestUrl = new URL(request.url);
   const state = generateState();
-  const redirectUri = `${requestUrl.origin}/callback`;
+  const redirectUri = getRedirectUri(request);
 
   const authorize = new URL(GITHUB_AUTHORIZE_URL);
   authorize.searchParams.set("client_id", env.GITHUB_CLIENT_ID);
@@ -78,21 +87,23 @@ async function handleCallback(request: Request, env: Env): Promise<Response> {
   const cookieState = readCookie(request.headers.get("cookie"), STATE_COOKIE);
 
   if (!state || !cookieState || state !== cookieState) {
-    return textResponse(400, "State mismatch");
+    return errorPage(400, { message: "State mismatch" });
   }
 
   if (!code) {
-    return textResponse(400, "Missing code");
+    return errorPage(400, { message: "Missing code" });
   }
 
-  const redirectUri = `${url.origin}/callback`;
+  const redirectUri = getRedirectUri(request);
 
   let tokenJson: TokenResponse;
   try {
     tokenJson = await exchangeCode(env, code, redirectUri);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "token_exchange_failed";
-    return errorPage(500, { message });
+    // Don't leak GitHub-side details (status codes, internal URLs) into the
+    // popup postMessage — the parent CMS only needs to know auth failed.
+    console.error("token exchange failed:", err);
+    return errorPage(500, { message: "GitHub authentication failed" });
   }
 
   if (!tokenJson.access_token) {
@@ -111,8 +122,8 @@ async function handleCallback(request: Request, env: Env): Promise<Response> {
   try {
     login = await fetchLogin(tokenJson.access_token);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "user_lookup_failed";
-    return errorPage(500, { message });
+    console.error("user lookup failed:", err);
+    return errorPage(500, { message: "GitHub authentication failed" });
   }
 
   if (!isAllowed(login, env.ALLOWED_GITHUB_USERS)) {
@@ -209,12 +220,8 @@ function generateState(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function textResponse(status: number, body: string): Response {
-  return new Response(body, {
-    status,
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
-  });
-}
+/** Set-Cookie value that clears the OAuth state cookie. */
+const CLEAR_STATE_COOKIE = `${STATE_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
 
 // Built via `new RegExp` so the source file does not contain raw U+2028 /
 // U+2029 — esbuild rejects those inside regex literals.
@@ -271,10 +278,7 @@ function successPage(token: string): Response {
   const html = buildPostMessageHtml(payload, "Authorization successful");
   const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
   // Clear the state cookie now that we're done with it.
-  headers.append(
-    "Set-Cookie",
-    `${STATE_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`
-  );
+  headers.append("Set-Cookie", CLEAR_STATE_COOKIE);
   return new Response(html, { status: 200, headers });
 }
 
@@ -282,8 +286,8 @@ function errorPage(status: number, errorObj: unknown): Response {
   const payload =
     "authorization:github:error:" + JSON.stringify(errorObj ?? {});
   const html = buildPostMessageHtml(payload, "Authorization failed");
-  return new Response(html, {
-    status,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
-  });
+  const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
+  // Don't leave a stale state cookie on the client after a failed callback.
+  headers.append("Set-Cookie", CLEAR_STATE_COOKIE);
+  return new Response(html, { status, headers });
 }

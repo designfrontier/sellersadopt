@@ -1,10 +1,6 @@
 name = "sellers-auth"
 main = "src/index.ts"
-# NB: ideally this would be a date within the last two months (~2026-03-10),
-# but the wrangler version pinned in package.json (3.x) ships a workerd whose
-# newest supported compatibility date is 2024-12-30. Bump this when we upgrade
-# wrangler to a 4.x line that ships a newer workerd.
-compatibility_date = "2024-12-30"
+compatibility_date = "2026-04-01"
 
 # ---------------------------------------------------------------------------
 # Required runtime configuration
