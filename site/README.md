@@ -3,8 +3,10 @@
 The public-facing website for <https://sellersadopt.com>.
 
 For the high-level architecture, see [`../README.md`](../README.md).
-For Cloudflare/GitHub setup, see [`../SETUP.md`](../SETUP.md). For the
-day-to-day editor guide, see [`../CMS-GUIDE.md`](../CMS-GUIDE.md).
+For one-time setup (DNS, OAuth app, auth Worker, CI secrets), see
+[`../SETUP.md`](../SETUP.md). For the day-to-day editor guide, see
+[`../CMS-GUIDE.md`](../CMS-GUIDE.md). For the Sveltia config and the
+in-repo media model, see [`./public/admin/README.md`](./public/admin/README.md).
 
 ## What's in this directory
 
@@ -13,6 +15,8 @@ day-to-day editor guide, see [`../CMS-GUIDE.md`](../CMS-GUIDE.md).
   in `src/content.config.ts`, validated against Zod schemas at build time.
 - `public/admin/` ships the Sveltia CMS at `/admin/` in production
   (Astro copies `public/` verbatim).
+- `public/CNAME` (contents: `sellersadopt.com`) — the custom-domain
+  marker GitHub Pages reads from the deployed artifact. Don't delete it.
 - Node 22+ (`.nvmrc`, `engines.node`).
 
 ## Commands
@@ -26,8 +30,10 @@ npm run preview  # serve ./dist/ locally
 npm run check    # astro check: type-check + content schema validation
 ```
 
-Cloudflare Pages runs `npm ci && npm run build` from this directory on
-every push to `main` (see `../SETUP.md` step 4).
+The site is deployed to GitHub Pages by `.github/workflows/deploy-site.yml`
+on every push to `main` that touches `site/**`. The workflow runs
+`npm ci` and `npm run build` from this directory and uploads `site/dist`
+as the Pages artifact.
 
 The CMS at `http://localhost:4321/admin/` will load locally, but
 **login won't work** without also running the auth Worker locally and
@@ -38,7 +44,8 @@ markdown in `src/content/` and watch hot-reload.
 
 All four collections live under `src/content/<name>/` as `.md` files
 loaded via Astro's `glob()` content loader. The Zod schemas in
-`src/content.config.ts` enforce frontmatter shape.
+`src/content.config.ts` enforce frontmatter shape. Image uploads from
+the CMS land under `src/content/<collection>/images/<filename>`.
 
 | Collection | Path                  | Example file                  |
 | ---------- | --------------------- | ----------------------------- |
@@ -68,7 +75,7 @@ order: 1
 # src/content/gallery/<slug>.md
 ---
 title: Sledding at the canyon
-image: ./sledding.jpg
+image: images/sledding.jpg
 alt: Two kids in red snowsuits at the bottom of a sledding hill
 caption: First snow of the season
 takenAt: 2025-12-12
@@ -83,6 +90,13 @@ summary: "A first note from us — what this site is, why we're here."
 ---
 ```
 
+Note the `image:` value: `images/sledding.jpg`, **relative to the
+markdown file**. That's the shape Sveltia writes when an editor uploads
+a photo through the image widget (per-field `media_folder: images` /
+`public_folder: images` — see `public/admin/config.yml` and
+[`public/admin/README.md`](./public/admin/README.md)). Astro's `image()`
+schema helper resolves that path at build time.
+
 The full schemas (with optional fields and refinements) live in
 `src/content.config.ts`.
 
@@ -96,7 +110,9 @@ Two equivalent paths. Both produce the same markdown:
 2. **Direct file edit:** drop a new file at
    `src/content/<collection>/<slug>.md` with valid frontmatter and
    commit. Faster for bulk imports or anything you'd rather do in an
-   editor than a web form.
+   editor than a web form. If the entry uses an image, drop the binary
+   into `src/content/<collection>/images/<filename>` and reference it
+   as `image: images/<filename>` in the frontmatter.
 
 Sveltia will edit hand-written files; the build doesn't care which path
 produced a file.
@@ -127,8 +143,14 @@ If you ever want to add a new type of content (say, "events" or
 
 2. **Add a matching `collections:` block in
    `public/admin/config.yml`** so the CMS knows about it. Field widgets
-   must mirror the Zod schema (see `public/admin/README.md` →
-   "How to add a new collection" for the widget mapping rules).
+   must mirror the Zod schema. **Critical for any image field:** copy
+   the per-field `media_folder: images` / `public_folder: images`
+   pattern from the existing image widgets (`pages.hero`,
+   `family.photo`, `gallery.image`, `blog.hero`) so uploads land at
+   `src/content/<collection>/images/` next to the markdown — not in the
+   top-level fallback at `public/uploads/`. See
+   [`public/admin/README.md`](./public/admin/README.md) → "How to add a
+   new collection" for the full widget mapping rules.
 
 3. Build at least one Astro page that consumes the new collection —
    typically an index under `src/pages/` and a `[slug].astro` for
@@ -143,10 +165,11 @@ fail to build them.
 
 `public/admin/` is the Sveltia CMS — Astro copies it verbatim into
 `dist/admin/`. Two files there you may touch: `config.yml` (collections,
-backend, R2 details — must mirror the Zod schemas) and `index.html`
-(pinned Sveltia CDN URL). See `public/admin/README.md` for widget
-mapping rules and upgrade procedure, and [`../CMS-GUIDE.md`](../CMS-GUIDE.md)
-for the editor experience.
+backend, media — must mirror the Zod schemas) and `index.html`
+(pinned Sveltia CDN URL). See
+[`public/admin/README.md`](./public/admin/README.md) for widget mapping
+rules, the in-repo media model, and the Sveltia upgrade procedure;
+[`../CMS-GUIDE.md`](../CMS-GUIDE.md) covers the editor experience.
 
 ## Troubleshooting
 
@@ -156,12 +179,18 @@ for the editor experience.
 - **Dates off by one.** Astro parses `date:` and `takenAt:` as UTC.
   Bare `2026-04-26` in a negative-UTC timezone may render as April 25.
   Include a time (`2026-04-26T12:00:00`) or format in UTC explicitly.
-- **Image field error "expected ImageMetadata, got string".** Schemas
-  use Astro's `image()` helper, so values must resolve to a local file
-  (`./photo.jpg` next to the markdown, or a path under `src/assets/`).
-  Bare URLs don't satisfy `image()`. For remote images, either place a
-  local copy or change the schema for that field to `z.string().url()`
-  and update the consuming `.astro` page.
+- **`LocalImageUsedWrongly` after deleting an entry locally.** Astro's
+  content cache (`node_modules/.astro/`) can hold a stale reference to
+  a removed image-bearing entry and fail the next build with this
+  error. Fix locally with:
+
+  ```sh
+  rm -rf node_modules/.astro
+  npm run build
+  ```
+
+  This only affects local dev; CI starts from a clean checkout each
+  run, so it never sees the stale cache.
 - **`Cannot find module 'astro:content'`.** Virtual module Astro
   generates from content collections. Run `npx astro sync` (or just
   `npm run dev` once) to regenerate `.astro/` types.

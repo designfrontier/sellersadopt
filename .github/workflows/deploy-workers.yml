@@ -1,20 +1,20 @@
-# Deploy Cloudflare Workers (auth + uploads) on push to main.
+# Deploy Cloudflare Workers (auth) on push to main.
 #
 # Required repository secrets (set in GitHub: Settings -> Secrets and variables -> Actions):
 #   - CLOUDFLARE_API_TOKEN  Cloudflare API token. Permissions:
 #                             * Account - Workers Scripts:Edit
 #                             * Account - Account Settings:Read
-#                             * Account - Workers R2 Storage:Edit  (uploads worker R2 binding)
 #                           Scope: only the sellersadopt.com account / zone.
 #   - CLOUDFLARE_ACCOUNT_ID Cloudflare account ID; consumed by wrangler.
 #
-# Worker runtime secrets (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, ALLOWED_GITHUB_USERS,
-# R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, etc.) are NOT set here; they are bound on
-# Cloudflare directly via `wrangler secret put` (Wave 3).
+# Worker runtime secrets (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, ALLOWED_GITHUB_USERS)
+# are NOT set here; they are bound on Cloudflare directly via `wrangler secret put`
+# (see SETUP.md step 6).
 #
-# To add a future Worker: drop it under workers/<name>/ with the standard
-# scripts (test, typecheck, deploy) and add its name to strategy.matrix.worker
-# plus a filter line in the paths-filter step.
+# Currently the matrix has a single entry: `auth`. To add a future Worker, drop it
+# under workers/<name>/ with the standard scripts (test, typecheck, deploy), append
+# its name to strategy.matrix.worker, add a filter line under the paths-filter step,
+# and extend the `if:` guard on the Deploy step with a matching matrix branch.
 
 name: Deploy Workers
 

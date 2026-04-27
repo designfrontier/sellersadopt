@@ -1,27 +1,54 @@
-# SETUP.md — One-time Cloudflare + GitHub Setup
+# SETUP.md — Finalize and go live
 
-This document walks through every step needed to take a freshly-built
-clone of this repo to a fully-working production site at
-<https://sellersadopt.com>. It assumes you (Daniel) are doing this once.
+This document is the complete, ordered checklist Daniel follows once to take
+a freshly-built clone of this repo to a fully-working production site at
+<https://sellersadopt.com>. Each step unblocks the next — work them in
+order.
 
 If you're looking for day-to-day editing instructions, see
 [CMS-GUIDE.md](./CMS-GUIDE.md). For the high-level overview, see
-[README.md](./README.md).
+[README.md](./README.md). For the auth Worker internals, see
+[workers/auth/README.md](./workers/auth/README.md).
+
+---
+
+## Architecture in one paragraph
+
+The static site is built and served by **GitHub Pages** (workflow:
+`.github/workflows/deploy-site.yml`). The custom domain `sellersadopt.com`
+points at GitHub Pages via Cloudflare DNS. Image uploads from the CMS are
+**committed into the git repo** alongside the markdown that references them
+— there is no external media storage, and Cloudflare is used purely for
+DNS plus the auth Worker. The only Cloudflare Worker in play is
+`workers/auth/`, which handles GitHub OAuth for Sveltia at
+`auth.sellersadopt.com`.
+
+A note on placeholder syntax in this doc: anywhere you see
+`<UPPERCASE_IN_ANGLE_BRACKETS>`, that's a value you (Daniel) need to
+substitute in. The full list:
+
+- `<GITHUB_CLIENT_ID_VALUE>` — from step 4
+- `<GITHUB_CLIENT_SECRET_VALUE>` — from step 4
+- `<CLOUDFLARE_API_TOKEN_VALUE>` — from step 8
+- `<CLOUDFLARE_ACCOUNT_ID_VALUE>` — from step 8
+- `<KATIE_GITHUB_USERNAME>` — Katie's actual GitHub login. Default
+  assumption is `ktbs296-boop`; **confirm with Katie** before pasting it
+  into the allowlist.
 
 ---
 
 ## Table of contents
 
 1. [Prereqs](#1-prereqs)
-2. [R2 bucket](#2-r2-bucket)
-3. [R2 API token](#3-r2-api-token-for-editors-browsers)
-4. [Cloudflare Pages project](#4-cloudflare-pages-project)
-5. [GitHub OAuth App](#5-github-oauth-app)
-6. [Auth Worker secrets and custom domain](#6-auth-worker-secrets--custom-domain)
-7. [Cloudflare API token](#7-cloudflare-api-token-for-repo-ci)
-8. [GitHub repo secrets](#8-github-repo-secrets)
+2. [Enable GitHub Pages](#2-enable-github-pages)
+3. [Cloudflare DNS — apex records](#3-cloudflare-dns--apex-records)
+4. [Register GitHub OAuth App](#4-register-github-oauth-app)
+5. [Auth Worker — set the allowlist](#5-auth-worker--set-the-allowlist)
+6. [Auth Worker — set secrets and deploy](#6-auth-worker--set-secrets-and-deploy)
+7. [Auth Worker — custom domain](#7-auth-worker--custom-domain)
+8. [CI secrets](#8-ci-secrets)
 9. [Add Katie as repo collaborator](#9-add-katie-as-repo-collaborator)
-10. [Fill in admin config placeholders](#10-fill-in-admin-config-placeholders)
+10. [First push to main](#10-first-push-to-main)
 11. [Verify end-to-end](#11-verify-end-to-end)
 12. [Troubleshooting](#troubleshooting)
 
@@ -31,10 +58,11 @@ If you're looking for day-to-day editing instructions, see
 
 Before you start, make sure you have:
 
-- A **Cloudflare account** with the `sellersadopt.com` zone active
-  (DNS managed by Cloudflare).
+- A **Cloudflare account** with the `sellersadopt.com` zone active. We use
+  Cloudflare for DNS plus the auth Worker — there is no external media
+  storage. (Proxy/CDN in front of GitHub Pages is optional; see step 3.)
 - A **GitHub account** that owns this repo (`designfrontier/adoption`).
-- **Node.js 22+** locally (the site and Workers both target Node 22).
+- **Node.js 22+** locally (the site and the auth Worker both target Node 22).
 - **Wrangler CLI** installed and authenticated:
 
   ```sh
@@ -44,158 +72,97 @@ Before you start, make sure you have:
 
   `wrangler login` opens a browser to your Cloudflare account and stores
   a token in `~/.wrangler/`. Verify with `wrangler whoami` — it should
-  print your account name and account ID.
+  print your account name and account ID. (You'll need that account ID
+  again in step 8.)
 
-You'll also want a **password manager** open. You're about to generate
-several secrets that need to live somewhere safe, and a couple of them
-also need to be shared with Katie.
-
-A note on placeholder syntax in this doc: anywhere you see
-`<UPPERCASE_IN_ANGLE_BRACKETS>`, that's a value you (Daniel) need to
-substitute in. Search-and-replace as you go.
+- A **password manager** open. You'll generate several secrets that need
+  to live somewhere safe.
 
 ---
 
-## 2. R2 bucket
+## 2. Enable GitHub Pages
 
-The R2 bucket is where uploaded photos live. It's served publicly
-through `uploads.sellersadopt.com`.
+Do this **before** the first deploy workflow run, otherwise
+`actions/configure-pages` errors out with "Get Pages site failed".
 
-### 2a. Create the bucket
+1. Repo **Settings** → **Pages** → **Build and deployment**.
+2. **Source** = **GitHub Actions** (not "Deploy from a branch").
+3. Save.
 
-```sh
-wrangler r2 bucket create sellersadopt-uploads
-```
+You don't need to fill in the **Custom domain** field manually — the
+`site/public/CNAME` file (already committed, contents `sellersadopt.com`)
+tells Pages the custom domain on the first successful deploy. Pages will
+auto-populate the field once the artifact lands.
 
-The bucket name must match `R2_BUCKET` in `workers/uploads/wrangler.toml`
-and the `bucket:` field in `site/public/admin/config.yml` (you'll fill
-that in during step 10).
-
-### 2b. Set CORS on the bucket
-
-Sveltia uploads from the browser at `https://sellersadopt.com/admin/`
-straight to R2 via the S3 API. R2 needs to allow that origin.
-
-Save this as `r2-cors.json` somewhere local:
-
-```json
-[
-  {
-    "AllowedOrigins": [
-      "https://sellersadopt.com"
-    ],
-    "AllowedMethods": ["PUT", "GET", "HEAD", "POST", "DELETE"],
-    "AllowedHeaders": ["*"],
-    "ExposeHeaders": ["ETag"],
-    "MaxAgeSeconds": 3600
-  }
-]
-```
-
-Apply it:
-
-```sh
-wrangler r2 bucket cors put sellersadopt-uploads --rules ./r2-cors.json
-```
-
-(If your wrangler version uses a different flag — `--file` vs `--rules`,
-or a positional arg — run `wrangler r2 bucket cors put --help` to see the
-exact syntax for your version. The JSON shape above is stable.)
-
-Verify:
-
-```sh
-wrangler r2 bucket cors list sellersadopt-uploads
-```
-
-If you ever need to test from `localhost:4321` (rare — the CMS expects
-the production domain), add `http://localhost:4321` to `AllowedOrigins`
-and re-apply.
-
-### 2c. Connect the public custom domain
-
-This is what makes the bucket publicly readable so `<img src="...">`
-actually works on the site.
-
-In the Cloudflare dashboard:
-
-1. **R2** → **sellersadopt-uploads** → **Settings**.
-2. Under **Public Access**, choose **Connect Domain**.
-3. Enter `uploads.sellersadopt.com`.
-4. Cloudflare will auto-create a CNAME record on the `sellersadopt.com`
-   zone. Confirm.
-5. Wait until the status flips to **Connected** (usually < 1 minute).
-
-You can sanity-check by hitting any object you upload at
-`https://uploads.sellersadopt.com/<object-key>`.
+You also don't need to set anything else here yet. The deploy workflow
+(`.github/workflows/deploy-site.yml`) already has the right permissions
+(`pages: write`, `id-token: write`) and uses the workflow's OIDC token,
+so no GitHub-side secrets are needed for the site deploy.
 
 ---
 
-## 3. R2 API token (for editors' browsers)
+## 3. Cloudflare DNS — apex records
 
-Editors upload directly to R2 from the browser using an S3-compatible
-access key. This is a separate token from the Cloudflare API token used
-by CI (step 7).
+Add these records to the `sellersadopt.com` zone in Cloudflare. The four
+A records are the required ones; the AAAA records and the `www` CNAME are
+optional polish.
 
-In the Cloudflare dashboard:
+**Required — 4× A records on the apex (`@`):**
 
-1. **R2** → **Manage R2 API Tokens** → **Create API Token**.
-2. **Token name:** `sellersadopt-cms-uploads`
-3. **Permissions:** **Object Read & Write**
-4. **Specify bucket(s):** scope to `sellersadopt-uploads` only.
-5. **TTL:** leave at no expiry (you can rotate manually if needed).
-6. **Create.**
+| Type | Name | Value             |
+| ---- | ---- | ----------------- |
+| A    | `@`  | `185.199.108.153` |
+| A    | `@`  | `185.199.109.153` |
+| A    | `@`  | `185.199.110.153` |
+| A    | `@`  | `185.199.111.153` |
 
-Cloudflare shows the credentials **once**. Copy:
+**Optional — 4× AAAA records on the apex for IPv6:**
 
-- **Access Key ID** → save as `<R2_ACCESS_KEY_ID_VALUE>` (this is public-ish — it goes into `config.yml`)
-- **Secret Access Key** → save as `<R2_SECRET_ACCESS_KEY_VALUE>` (sensitive — never commit)
+| Type | Name | Value                    |
+| ---- | ---- | ------------------------ |
+| AAAA | `@`  | `2606:50c0:8000::153`    |
+| AAAA | `@`  | `2606:50c0:8001::153`    |
+| AAAA | `@`  | `2606:50c0:8002::153`    |
+| AAAA | `@`  | `2606:50c0:8003::153`    |
 
-Save both in your password manager. Then **share the Secret Access Key
-privately with Katie** (Signal, an encrypted password-manager share, or
-in person — not email or Slack). She'll paste it into the Sveltia UI the
-first time she uploads an image. See
-[CMS-GUIDE.md → "First time only"](./CMS-GUIDE.md#first-time-only-pasting-the-upload-key)
-for the editor-side instructions.
+**Optional — `www` CNAME:**
 
----
+| Type  | Name  | Value                       |
+| ----- | ----- | --------------------------- |
+| CNAME | `www` | `designfrontier.github.io.` |
 
-## 4. Cloudflare Pages project
+(Replace `designfrontier` with whatever GitHub username/org owns the repo
+if it ever moves.)
 
-This builds and hosts the static Astro site.
+### Cloudflare proxy mode
 
-In the Cloudflare dashboard:
+Each record has an orange-cloud / gray-cloud toggle:
 
-1. **Workers & Pages** → **Create application** → **Pages** →
-   **Connect to Git**.
-2. Authorize Cloudflare to access GitHub if prompted, then pick
-   `designfrontier/adoption`.
-3. Configure the build:
+- **Orange cloud (proxied):** Cloudflare CDN/DDoS sits in front of GitHub
+  Pages. Faster cache for repeat visitors, hides the origin IPs, and gives
+  you Cloudflare analytics. **If you proxy, set SSL/TLS mode to "Full"**
+  (Cloudflare dashboard → SSL/TLS → Overview). GitHub Pages provisions a
+  Let's Encrypt cert for the custom domain on first deploy; that takes a
+  few minutes to issue, and "Full" is robust during that window. Once the
+  GitHub-issued cert is live you can move to "Full (strict)" for stricter
+  validation.
+- **Gray cloud (DNS-only):** records resolve straight to GitHub Pages'
+  anycast IPs. Simplest path; GitHub handles TLS end-to-end.
 
-   | Field                | Value                          |
-   | -------------------- | ------------------------------ |
-   | Project name         | `sellersadopt`                 |
-   | Production branch    | `main`                         |
-   | Build command        | `cd site && npm ci && npm run build` |
-   | Build output         | `site/dist`                    |
-   | Root directory       | *(leave blank)*                |
-   | Environment variables| *(none — site is fully static)*|
+Either is fine. Recommendation: start gray-cloud, confirm the site loads
+and the cert is healthy, and only then flip to orange + "Full".
 
-4. **Save and Deploy.** The first build will run. It should succeed
-   (the site builds clean against an empty `gallery` collection).
+### Why `site/public/CNAME` matters
 
-5. Once the build is green, add the custom domain:
-   - **Custom domains** → **Set up a custom domain** → `sellersadopt.com`.
-   - Cloudflare will offer to add the DNS record automatically. Accept.
-   - Optionally add `www.sellersadopt.com` and configure a redirect to
-     the apex.
-
-You should now be able to visit `https://sellersadopt.com` and see the
-site. (`/admin/` won't work yet — we still need the auth Worker.)
+The file at `site/public/CNAME` (already committed, contents
+`sellersadopt.com`) is what tells GitHub Pages this is the custom domain.
+Astro copies it verbatim into `dist/`, the Pages workflow uploads it as
+part of the artifact, and Pages binds the domain on deploy. Don't delete
+it.
 
 ---
 
-## 5. GitHub OAuth App
+## 4. Register GitHub OAuth App
 
 This is what lets Sveltia authenticate editors via GitHub.
 
@@ -209,98 +176,124 @@ This is what lets Sveltia authenticate editors via GitHub.
    | Application description     | *(optional — "Adoption site CMS")*         |
    | Authorization callback URL  | `https://auth.sellersadopt.com/callback`   |
 
-   The callback URL **must match exactly** — including no trailing slash.
-   GitHub will reject the token exchange with `redirect_uri_mismatch`
-   otherwise.
+   The callback URL **must match exactly** — `https`, no trailing slash,
+   no extra path. GitHub will reject the token exchange with
+   `redirect_uri_mismatch` otherwise.
 
 3. **Register application.**
 4. On the next screen, copy the **Client ID** → save as
-   `<GITHUB_CLIENT_ID_VALUE>`.
-5. Click **Generate a new client secret**. Copy immediately → save as
-   `<GITHUB_CLIENT_SECRET_VALUE>` (you cannot view it again later).
+   `<GITHUB_CLIENT_ID_VALUE>` in your password manager.
+5. Click **Generate a new client secret**. Copy it immediately → save as
+   `<GITHUB_CLIENT_SECRET_VALUE>`. You **cannot** view it again later —
+   if you lose it, generate a new one.
 
-If you're hosting your repo under an organization, register the OAuth
-app under that org instead and grant it access to the repo.
+If you ever transfer the repo to an org, register the OAuth app under the
+org instead and grant it access to the repo.
 
 ---
 
-## 6. Auth Worker secrets + custom domain
+## 5. Auth Worker — set the allowlist
 
-The auth Worker (`workers/auth/`) handles the OAuth callback. Background:
-[workers/auth/README.md](./workers/auth/README.md).
+The auth Worker rejects logins for any GitHub user not on its allowlist.
 
-### 6a. Set the secrets
+Edit `workers/auth/wrangler.toml`. Find the `[vars]` block (currently
+`ALLOWED_GITHUB_USERS = ""`) and set it:
+
+```toml
+[vars]
+ALLOWED_GITHUB_USERS = "designfrontier,<KATIE_GITHUB_USERNAME>"
+```
+
+Default assumption: `<KATIE_GITHUB_USERNAME>` is `ktbs296-boop`. **Confirm
+with Katie** that this is her actual GitHub login (the URL slug at
+`github.com/<login>` — display names don't count) before saving.
+
+The value is comma-separated, case-insensitive at runtime, and trimmed of
+whitespace. Don't quote individual usernames.
+
+You can either commit this change now and let CI redeploy it (after step 8
+is done) or hold off and commit at step 10. Either works.
+
+---
+
+## 6. Auth Worker — set secrets and deploy
+
+This is a manual one-time deploy that gets the auth Worker reachable on
+Cloudflare's `*.workers.dev` domain. After this, CI redeploys it on every
+push to `main` that touches `workers/**`.
 
 ```sh
 cd workers/auth
 
 wrangler secret put GITHUB_CLIENT_ID
-# paste <GITHUB_CLIENT_ID_VALUE> when prompted
+# paste <GITHUB_CLIENT_ID_VALUE> from step 4 when prompted
 
 wrangler secret put GITHUB_CLIENT_SECRET
-# paste <GITHUB_CLIENT_SECRET_VALUE> when prompted
-```
+# paste <GITHUB_CLIENT_SECRET_VALUE> from step 4 when prompted
 
-`ALLOWED_GITHUB_USERS` is a plain var, not a secret — it's defined in
-`workers/auth/wrangler.toml` under `[vars]`. Edit that file to set it:
-
-```toml
-[vars]
-ALLOWED_GITHUB_USERS = "designfrontier,ktbs296-boop"
-```
-
-(Adjust the second username to Katie's actual GitHub login if it differs.
-Comma-separated, case-insensitive at runtime.)
-
-Commit that change to `wrangler.toml` so CI redeploys pick it up too.
-
-### 6b. Manual first deploy
-
-```sh
-# still in workers/auth/
 npm install
 wrangler deploy
 ```
 
-This uploads the Worker. Subsequent deploys happen automatically via
-GitHub Actions (`.github/workflows/deploy-workers.yml`) once you finish
-step 8.
+`wrangler deploy` prints the Worker's `*.workers.dev` URL. The Worker is
+now live but only reachable on that workers.dev URL until step 7 connects
+the custom domain.
 
-### 6c. Connect the custom domain
+---
+
+## 7. Auth Worker — custom domain
+
+Connect `auth.sellersadopt.com` to the Worker so the OAuth callback URL
+from step 4 actually routes to it.
 
 In the Cloudflare dashboard:
 
 1. **Workers & Pages** → **sellers-auth** → **Settings** → **Triggers**
    → **Custom Domains** → **Add Custom Domain**.
 2. Enter `auth.sellersadopt.com`.
-3. Cloudflare auto-creates the DNS record on the zone.
-4. Wait until status is **Active** (usually < 1 minute).
+3. Cloudflare auto-creates the DNS record on the `sellersadopt.com` zone.
+4. Wait until the status flips to **Active** (usually under a minute).
 
-Sanity-check: `curl -I https://auth.sellersadopt.com/auth` should return
-a 302 redirect to `github.com/login/oauth/authorize`. (It will redirect
-even without a logged-in browser — that's expected.)
+Sanity check from your terminal:
+
+```sh
+curl -I https://auth.sellersadopt.com/auth
+```
+
+You should see a 302 redirect with a `Location:` header pointing at
+`https://github.com/login/oauth/authorize?...`. (It will redirect even
+without a logged-in browser — the Worker doesn't know who you are at that
+point.)
 
 ---
 
-## 7. Cloudflare API token (for repo CI)
+## 8. CI secrets
 
-The GitHub Actions workflow that auto-redeploys Workers needs an API
-token to talk to Cloudflare.
+The `deploy-workers.yml` workflow needs a Cloudflare API token to redeploy
+the auth Worker on push to `main`.
+
+### 8a. Create the Cloudflare API token
 
 In the Cloudflare dashboard:
 
 1. **My Profile** → **API Tokens** → **Create Token**.
 2. Use the **Edit Cloudflare Workers** template as a starting point.
-3. Add **Account → Workers R2 Storage → Edit** to the permissions list
-   (the uploads Worker has an R2 binding, so deploys need this).
-4. Scope **Account Resources** to your single Cloudflare account (not
+3. Permissions you need (the template usually pre-fills both):
+   - **Account → Workers Scripts → Edit**
+   - **Account → Account Settings → Read**
+
+   No storage permissions are required — the auth Worker has no
+   storage bindings, and there is no other Worker to deploy.
+4. **Account Resources** → set to your single Cloudflare account (not
    "All accounts").
-5. Scope **Zone Resources** to `sellersadopt.com` only.
-6. **Continue → Create Token.** Copy the value → save as
+5. **Zone Resources** → set to **Specific zone** → `sellersadopt.com`.
+6. **Continue → Create Token.** Copy the value once → save as
    `<CLOUDFLARE_API_TOKEN_VALUE>`.
 
-Also grab your **Account ID** — visible on the Cloudflare dashboard
-sidebar of any account-scoped page, or via:
+### 8b. Grab your account ID
+
+The Cloudflare account ID is visible in the dashboard sidebar of any
+account-scoped page, or via:
 
 ```sh
 wrangler whoami
@@ -308,9 +301,7 @@ wrangler whoami
 
 Save as `<CLOUDFLARE_ACCOUNT_ID_VALUE>`.
 
----
-
-## 8. GitHub repo secrets
+### 8c. Set the GitHub repo secrets
 
 In GitHub:
 
@@ -324,11 +315,12 @@ In GitHub:
    | `CLOUDFLARE_ACCOUNT_ID` | `<CLOUDFLARE_ACCOUNT_ID_VALUE>`    |
 
 Once these are set, any push to `main` that touches `workers/**` will
-trigger `.github/workflows/deploy-workers.yml` and redeploy the Workers
-automatically.
-
-You can also force a redeploy manually from **Actions** →
+trigger `.github/workflows/deploy-workers.yml` and redeploy the auth
+Worker automatically. You can also force a redeploy from **Actions** →
 **Deploy Workers** → **Run workflow**.
+
+The site deploy (`.github/workflows/deploy-site.yml`) does not need any
+GitHub secrets — it uses the workflow's OIDC token to publish to Pages.
 
 ---
 
@@ -338,58 +330,42 @@ Sveltia commits to the repo on Katie's behalf using her own GitHub
 identity. So GitHub needs to know she's allowed to push.
 
 1. Repo **Settings** → **Collaborators** → **Add people**.
-2. Invite `<KATIE_GITHUB_USERNAME>` (e.g. `ktbs296-boop`).
+2. Invite `<KATIE_GITHUB_USERNAME>` (default: `ktbs296-boop`).
 3. **Permission:** **Write**. Anything less and Sveltia commits will
    fail with a 403.
 4. Have Katie accept the invite (GitHub emails her).
 
 Confirm her username matches the one in `ALLOWED_GITHUB_USERS` from
-step 6a — that's the gate the auth Worker checks. If they differ, you'll
-update both.
+step 5. If they differ, fix both.
 
 ---
 
-## 10. Fill in admin config placeholders
+## 10. First push to main
 
-Edit `site/public/admin/config.yml`. Find the
-`media_libraries.cloudflare_r2` block and replace the four
-`REPLACE_WITH_…` values:
-
-```yaml
-media_libraries:
-  cloudflare_r2:
-    account_id: <CLOUDFLARE_ACCOUNT_ID_VALUE>
-    bucket: sellersadopt-uploads
-    public_url: https://uploads.sellersadopt.com
-    access_key_id: <R2_ACCESS_KEY_ID_VALUE>
-    prefix: cms/
-```
-
-A few notes:
-
-- `account_id` is the same Cloudflare account ID from step 7.
-- `bucket` matches the bucket name from step 2a.
-- `public_url` matches the custom domain from step 2c.
-- `access_key_id` is the **public** half of the R2 token from step 3.
-  This one is safe to commit (it's effectively a username); the matching
-  secret access key is **never** in this file — editors paste it into
-  the Sveltia UI on first use.
-
-Commit and push:
+Commit any open changes from earlier steps and push:
 
 ```sh
-git add site/public/admin/config.yml workers/auth/wrangler.toml
-git commit -m "config: fill Cloudflare R2 + auth Worker production values"
+# from the repo root
+git add workers/auth/wrangler.toml
+git commit -m "config: set ALLOWED_GITHUB_USERS for production"
 git push origin main
 ```
 
-This push triggers two things in parallel:
+Two workflows fire in parallel:
 
-- Cloudflare Pages rebuilds the site (because `site/**` changed).
-- GitHub Actions redeploys the auth Worker (because `workers/auth/**`
-  changed in step 6a).
+- **Deploy Site** (`.github/workflows/deploy-site.yml`) — builds the
+  Astro site and publishes it to GitHub Pages. Triggers on any change
+  under `site/**` or to its own workflow file. No secrets needed.
+- **Deploy Workers** (`.github/workflows/deploy-workers.yml`) —
+  redeploys the auth Worker. Triggers on any change under `workers/**`
+  or to its own workflow file. Uses `CLOUDFLARE_API_TOKEN` and
+  `CLOUDFLARE_ACCOUNT_ID` from step 8.
 
-Watch both finish before moving on.
+Watch both finish in the **Actions** tab. The first site deploy can take
+2–3 minutes; subsequent deploys are quicker. After the deploy finishes,
+GitHub Pages may take a couple more minutes to provision the Let's Encrypt
+cert for `sellersadopt.com` — if you see a TLS warning on first visit,
+wait ~5 minutes and retry.
 
 ---
 
@@ -397,7 +373,12 @@ Watch both finish before moving on.
 
 You're now wired up. Walk through the full editor flow once to be sure.
 
-### 11a. Login
+### 11a. Public site loads
+
+Visit <https://sellersadopt.com>. You should see the homepage. Check the
+nav links (About, Letter, Pictures, Blog, Contact) all resolve.
+
+### 11b. Login to /admin/
 
 1. Open <https://sellersadopt.com/admin/> (note the trailing slash).
 2. You should see the Sveltia login screen with a **Login with GitHub**
@@ -410,29 +391,31 @@ You're now wired up. Walk through the full editor flow once to be sure.
 
 If login fails, jump to [Troubleshooting](#troubleshooting).
 
-### 11b. Edit-and-publish
+### 11c. Edit-and-publish a blog post
 
 1. Open **Blog / journal** → **Welcome to our journey**.
 2. Add or change a sentence in the body. Click **Publish**.
-3. Wait ~30–60 seconds for Cloudflare Pages to rebuild.
+3. Wait ~30–60 seconds for the GitHub Pages build to finish (watch the
+   **Actions** tab if you want to see it).
 4. Hard-refresh <https://sellersadopt.com/blog/welcome>. The change
    should be live.
 
-### 11c. Image upload
+### 11d. Upload a photo via Photo Gallery
 
 1. Open **Photo gallery** → **New** (top right).
-2. Fill in a title and alt text. Click into the **Image** widget.
-3. Sveltia prompts for the R2 **Secret Access Key**. Paste
-   `<R2_SECRET_ACCESS_KEY_VALUE>`. (You'll only have to do this once
-   per browser.)
-4. Upload a small test image (under 5 MB).
-5. Save and publish.
-6. After the next Pages build, the image should appear at
-   `https://sellersadopt.com/pictures` and the file itself should be
-   reachable at `https://uploads.sellersadopt.com/cms/<filename>`.
+2. Fill in a title and alt text.
+3. Click into the **Image** field and pick a small JPEG (under ~1 MB
+   ideally; under ~5 MB at the most). Sveltia commits the image binary
+   into the repo at `site/src/content/gallery/images/<filename>` along
+   with the new markdown file in the same commit. There is no separate
+   bucket or upload service — it goes straight to git.
+4. Click **Publish**.
+5. Wait ~30–60 seconds for GitHub Pages to rebuild.
+6. Refresh <https://sellersadopt.com/pictures>. Your new photo should
+   appear in the gallery.
 
-If the upload fails or the image 404s, jump to
-[Troubleshooting](#troubleshooting).
+If everything above works, you're done. Hand
+[CMS-GUIDE.md](./CMS-GUIDE.md) to Katie.
 
 ---
 
@@ -440,13 +423,14 @@ If the upload fails or the image 404s, jump to
 
 ### Login fails with "User not authorized"
 
-The auth Worker rejected your GitHub username. Check:
+The auth Worker rejected your GitHub username. Check, in order:
 
 - The `ALLOWED_GITHUB_USERS` value in `workers/auth/wrangler.toml`
   matches your actual GitHub login (case-insensitive, comma-separated,
-  no spaces required but trimmed).
-- Did you redeploy the Worker after changing it? Check the Actions tab,
-  or manually:
+  trimmed of whitespace).
+- Did the Worker redeploy after you changed it? Check **Actions** →
+  **Deploy Workers** for a green run after your push, or redeploy
+  manually:
 
   ```sh
   cd workers/auth && wrangler deploy
@@ -458,8 +442,8 @@ The auth Worker rejected your GitHub username. Check:
 
 ### Login fails with "State mismatch" or popup closes silently
 
-This is a CSRF check inside the auth Worker. It usually means cookies
-aren't surviving the GitHub redirect. Check:
+This is a CSRF check inside the auth Worker. It usually means the state
+cookie isn't surviving the GitHub redirect. Check:
 
 - You're hitting `https://auth.sellersadopt.com` (not a `*.workers.dev`
   preview URL). The state cookie is set with `Secure` so it requires
@@ -467,45 +451,7 @@ aren't surviving the GitHub redirect. Check:
 - You're not in a browser that strips third-party cookies aggressively
   (Safari with strict tracking prevention sometimes does). Try Chrome
   or Firefox to isolate.
-- The custom domain from step 6c is **Active**.
-
-### Sveltia gets "Access denied" when uploading
-
-The R2 backend rejected the request. Check, in this order:
-
-- The R2 bucket has the CORS rules from step 2b. Re-apply with
-  `wrangler r2 bucket cors put …` and verify with
-  `wrangler r2 bucket cors list sellersadopt-uploads`.
-- The `access_key_id` in `config.yml` matches the token from step 3,
-  and the secret access key the editor pasted into the UI is the
-  matching half (not a stale or rotated one).
-- The R2 token has **Object Read & Write** for the
-  `sellersadopt-uploads` bucket (step 3, step 4 — "Specify bucket(s)").
-
-### Uploaded image returns 404 at `https://uploads.sellersadopt.com/...`
-
-The bucket isn't publicly served, or the custom domain isn't live.
-Check:
-
-- **R2 → sellersadopt-uploads → Settings → Public Access** shows
-  `uploads.sellersadopt.com` as **Connected** (step 2c).
-- DNS for the subdomain resolves: `dig uploads.sellersadopt.com` should
-  return a Cloudflare A/AAAA record.
-- The object actually exists in the bucket: `wrangler r2 object list
-  sellersadopt-uploads --prefix cms/` should show it.
-
-### Build doesn't trigger when Sveltia commits
-
-The push happened but Pages didn't rebuild. Check:
-
-- **Cloudflare Pages → sellersadopt → Deployments**: do you see a build
-  for the latest commit? If not, the GitHub→Pages webhook is broken;
-  re-link the project under **Settings → Builds & deployments**.
-- The committing user (Daniel or Katie) is a repo collaborator with
-  Write permission (step 9). A non-collaborator's commit will be
-  rejected by GitHub before it ever reaches Pages.
-- Branch protection rules aren't blocking direct pushes to `main`.
-  Sveltia's `publish_mode: simple` commits straight to `main`.
+- The custom domain from step 7 is **Active**.
 
 ### GitHub OAuth says "callback URL mismatch"
 
@@ -513,30 +459,84 @@ GitHub is comparing the `redirect_uri` we send (built from the request's
 `origin`) against the value registered on the OAuth App. They must match
 exactly.
 
-- Re-check the OAuth App settings (step 5): the **Authorization
-  callback URL** must be exactly
-  `https://auth.sellersadopt.com/callback` — no trailing slash, no
-  trailing path, `https`.
+- Re-check the OAuth App settings (step 4): **Authorization callback URL**
+  must be exactly `https://auth.sellersadopt.com/callback` — no trailing
+  slash, no trailing path, `https` scheme.
 - Re-check the auth Worker is being hit at `auth.sellersadopt.com`,
   not `sellers-auth.<account>.workers.dev` (which would build a
   different `redirect_uri`).
 
+### Build doesn't trigger when Sveltia commits / Pages doesn't rebuild
+
+The push happened but GitHub Pages didn't rebuild. Check:
+
+- **Actions** tab: do you see a run for the latest commit? The
+  `deploy-site.yml` workflow only fires on changes under `site/**`. If
+  Sveltia committed an image into `site/src/content/<collection>/images/`
+  and a markdown file under `site/src/content/<collection>/`, both are
+  under `site/**` and the workflow will fire. If somehow the commit
+  landed entirely outside `site/**` (shouldn't happen with the current
+  config), the workflow skips by design — kick a manual run via
+  **Actions** → **Deploy Site** → **Run workflow**.
+- The committing user (Daniel or Katie) is a repo collaborator with
+  Write permission (step 9). A non-collaborator's commit will be
+  rejected by GitHub before it ever reaches the workflow.
+- Branch protection rules on `main` aren't blocking direct pushes.
+  Sveltia's `publish_mode: simple` commits straight to `main` and will
+  fail with a 403 if a required-PR rule is in place.
+
+### GitHub Pages first build fails with "Get Pages site failed"
+
+The Pages source isn't set. Go back to step 2: **Settings → Pages →
+Build and deployment → Source = "GitHub Actions"**, then re-run the
+workflow from **Actions** → **Deploy Site** → **Run workflow**.
+
 ### Worker deploy fails in CI with "Authentication error"
 
-The `CLOUDFLARE_API_TOKEN` secret is wrong, expired, or missing R2
-permissions. Re-create the token (step 7) making sure to add **Workers
-R2 Storage:Edit**, then update the GitHub secret (step 8).
+The `CLOUDFLARE_API_TOKEN` secret is wrong, expired, or missing
+permissions. Re-create the token (step 8a) — the only required scopes
+are **Workers Scripts:Edit** and **Account Settings:Read**, scoped to
+your single account and the `sellersadopt.com` zone — then update the
+GitHub secret (step 8c).
 
-### Pages build fails with "Cannot find module 'astro'"
+### DNS not resolving for `sellersadopt.com` or `auth.sellersadopt.com`
 
-The build command isn't running `npm ci` in the right directory. Check
-the project settings (step 4): build command should be
-`cd site && npm ci && npm run build` and build output `site/dist`.
+Likely a propagation lag or a proxy-mode mismatch.
+
+- DNS propagation across Cloudflare's edge is typically seconds, but
+  some recursive resolvers cache stale NS records. Try `dig
+  sellersadopt.com @1.1.1.1` and `dig sellersadopt.com @8.8.8.8` to
+  rule out your local resolver.
+- For the apex: confirm the four A records from step 3 are present.
+  `dig +short sellersadopt.com` should return the four `185.199.x.153`
+  addresses (gray cloud) or Cloudflare's anycast IPs (orange cloud).
+- For `auth.sellersadopt.com`: the record was auto-created in step 7.
+  Confirm it exists in Cloudflare DNS as a CNAME (proxied) pointing at
+  the Worker.
+- If you flipped to orange cloud and now hit a TLS error, set SSL/TLS
+  mode to **Full** (not Flexible, not Off) in the Cloudflare dashboard.
+
+### Image renders broken on the live site even though it's in the repo
+
+Almost always a path or schema issue, not a deploy issue.
+
+- The frontmatter `image:` value should be a path **relative to the
+  markdown file**, e.g. `image: images/our-yard.jpg` for a gallery
+  entry at `site/src/content/gallery/our-yard.md` referencing
+  `site/src/content/gallery/images/our-yard.jpg`. Sveltia writes this
+  shape automatically; double-check it on the entry if you hand-edited.
+- Astro's `image()` schema helper expects local files only. Bare URLs
+  fail validation. The Sveltia image widget always uploads as a local
+  file so this should not happen via the CMS, but it can happen if
+  someone hand-edits a markdown file.
+- Build logs in the **Actions** tab will surface schema errors with the
+  offending file path.
 
 ---
 
 ## Done
 
-If you got through verification, the system is live. Hand
-[CMS-GUIDE.md](./CMS-GUIDE.md) to Katie (and don't forget to send her
-the R2 secret access key out-of-band).
+If you got through verification, the system is live. From here on, both
+you and Katie just edit at <https://sellersadopt.com/admin/>. Hand
+[CMS-GUIDE.md](./CMS-GUIDE.md) to Katie — there's nothing private she
+needs to be sent out-of-band anymore.

@@ -18,9 +18,11 @@ boxes, image upload buttons, and a Save button. When you publish a
 change, it goes live on the public site (<https://sellersadopt.com>) in
 about 30–60 seconds.
 
-Behind the scenes, your edits are saved in our project's GitHub
+Behind the scenes, your edits are saved straight into our project's GitHub
 repository, the site automatically rebuilds, and the new version is
-deployed. You don't need to worry about any of that — it just works.
+deployed. Photos you upload are saved into the same repository, right
+next to the post that uses them. You don't need to worry about any of
+that — it just works.
 
 ---
 
@@ -47,34 +49,6 @@ Click any of them to see the existing content and edit or add new items.
 
 ---
 
-## First time only: pasting the upload key
-
-The very first time you try to upload a photo, Sveltia will pop up a
-small dialog asking for an **R2 Secret Access Key**. This is a long
-string of letters and numbers. Daniel will have sent it to you privately
-(over Signal, password manager share, or in person — not email).
-
-Paste it into the box and click **Save** (or whatever the confirm
-button says). That's it.
-
-A few things to know:
-
-- **You only have to do this once per browser.** Sveltia stores the key
-  in your browser, locally on your computer. It never goes to the repo
-  or anywhere public.
-- **If you get a new computer or use a different browser**, you'll get
-  the prompt again. Same key, same place to paste it.
-- **If you accidentally close the prompt**, refresh the page and try
-  uploading again — it'll re-prompt.
-- **Why does this exist?** It's how the editor proves to our cloud
-  storage (Cloudflare R2) that you're allowed to upload photos. It's
-  separate from your GitHub login because uploads go directly from
-  your browser to the storage, not through GitHub.
-
-If you've lost the key, ask Daniel — he has it in his password manager.
-
----
-
 ## How to add a blog post
 
 1. In the sidebar, click **Blog / journal**.
@@ -87,7 +61,8 @@ If you've lost the key, ask Daniel — he has it in his password manager.
    - **Summary** *(optional)* — one or two sentences shown on the
      blog index. If you skip this, only the title shows.
    - **Hero image** *(optional)* — a big image shown at the top of
-     the post. See "How to upload photos" below for how this works.
+     the post. See "How to upload photos" below for the rules of
+     thumb on size and format.
    - **Body** — the main text. You can use the formatting toolbar
      (bold, italic, headings, links, lists). You can also drop images
      into the body.
@@ -128,8 +103,8 @@ list, change what you want, and Publish.
 3. Fill in:
    - **Title** — short caption, e.g. "Sledding at the canyon".
    - **Image** — click the box and choose a file from your computer.
-     If this is your first upload of the session, you'll be asked to
-     paste the upload key (see "First time only" above).
+     The photo gets saved into the same place as the rest of the site
+     content, so it'll show up alongside this post automatically.
    - **Alt text** — a short, plain description of what's in the photo
      (e.g. "Two kids in red snowsuits laughing at the bottom of a
      sledding hill"). **This matters!** Screen readers and people on
@@ -139,24 +114,28 @@ list, change what you want, and Publish.
    - **Season** *(optional)* — `spring`, `summer`, `fall`, or `winter`.
 4. Click **Publish.**
 
-A few practical things:
+A few practical things — these matter more than they used to, because
+photos now live inside the project itself instead of in a separate cloud
+bucket:
 
-- **Photos go through Cloudflare automatically.** When you upload, the
-  file goes to our cloud storage, gets a public URL, and is served
-  fast everywhere in the world. You don't have to do anything special.
+- **Compress before you upload.** Aim for **under 1 MB** per photo, with
+  a hard ceiling of about **5 MB**. Phone photos are often 3–8 MB
+  straight off the camera; please run them through Photos → "Save as
+  JPEG" (smaller size) or a tool like ImageOptim before uploading. The
+  photo gets bundled into the website itself, so smaller is faster.
+- **JPEG is preferred for photos.** PNG is fine for screenshots or
+  graphics with text. WebP works too. **Don't upload HEIC** (the iPhone
+  default) — convert to JPEG first. On iPhone:
+  Settings → Camera → Formats → "Most Compatible" makes new photos
+  JPEG by default.
+- **Resize huge files.** A 4000×3000 photo is overkill for the web —
+  1500–2000 pixels on the long edge is plenty. The Photos app on Mac
+  has a "Resize" option in **File → Export**; on iPhone, the
+  built-in Mail / Messages "Choose Size" option does the same. Or just
+  drop it on Squoosh.app (free in your browser) before uploading.
 - **Alt text matters for accessibility.** If you're blank on what to
   write, just describe what you see, plainly. "Katie holding C in the
   backyard." That's enough.
-- **Size limits.** Cloudflare R2 will accept very large files, but to
-  keep the site fast and to avoid your phone choking on uploads, keep
-  photos **under 25 MB**. Most phone photos are 3–8 MB, which is fine.
-  If something is huge (say, a 50 MB raw export), open it in your
-  Photos app and "Share → Save as JPEG" first.
-- **Image formats.** JPEG, PNG, WebP, and GIF all work. Heavily
-  preferred: JPEG for photos. Don't upload HEIC (the iPhone default)
-  if you can avoid it — convert to JPEG first. (On iPhone:
-  Settings → Camera → Formats → "Most Compatible" makes new photos
-  JPEG by default.)
 
 ---
 
@@ -220,9 +199,11 @@ A few small things that can trip people up:
   even on a half-finished draft just to be safe — you can always edit
   it again.
 
-- **Uploading huge unsized photos.** A 50 MB photo will take forever to
-  upload over a slow connection, and it'll make the public page slow
-  to load too. Resize or re-export to JPEG first if it's enormous.
+- **Uploading huge unsized photos.** Photos are now stored as part of
+  the site itself, so a giant file makes both the upload slow and the
+  page slow to load later. If your file is bigger than 5 MB, please
+  resize or re-export to JPEG first. (See "How to upload photos" for
+  tools.)
 
 - **Using a non-image file in an image field.** The image upload box
   only wants real images (JPEG, PNG, WebP, GIF). PDFs, videos, or
