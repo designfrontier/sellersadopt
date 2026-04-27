@@ -4,15 +4,15 @@ This directory is the static admin SPA for editing site content. Astro copies
 `public/` verbatim into `dist/` at build time, so it's available in production
 at `https://sellersadopt.com/admin/`.
 
-> **Status:** the admin shell is built, but **uploads will not work in production
-> until Wave 3 setup completes** — the R2 placeholders in `config.yml` need to
-> be replaced with the live bucket details, and the auth Worker needs to be
-> deployed with its GitHub OAuth secrets. See `SETUP.md` at the repo root.
+> **Status:** the admin shell is built. Login + content editing work as soon as
+> the auth Worker is deployed with its GitHub OAuth secrets (see `SETUP.md` at
+> the repo root). No external media bucket is required — uploads commit
+> directly to the repo.
 
 > **Local dev quirk:** Astro's dev server doesn't auto-resolve `/admin/` to
 > `/admin/index.html`. When testing in `npm run dev`, visit
-> `http://localhost:4321/admin/index.html` directly. Production (Cloudflare
-> Pages) handles directory index requests correctly, so `/admin/` works there.
+> `http://localhost:4321/admin/index.html` directly. Production handles
+> directory index requests correctly, so `/admin/` works there.
 
 ## What's here
 
@@ -32,46 +32,44 @@ at `https://sellersadopt.com/admin/`.
    Gallery, Blog) from the GitHub repo and presents a Notion-style editor.
    "Publish" commits straight to `main` (`publish_mode: simple`).
 
-### First-time R2 setup (per editor, per browser)
+## Media handling — in-repo, per-field
 
-The first time an editor uploads an image, Sveltia prompts for an R2
-**Secret Access Key**. This is stored only in the editor's browser
-local storage, never in the repo. Daniel will share the secret out-of-band
-with Katie when the bucket is provisioned (Wave 3). The matching access key
-*id* lives in `config.yml`.
+Image uploads commit **into the git repo**, alongside the markdown that
+references them. There is no external media bucket, no CDN, no separate
+upload service — when an editor adds a photo to a gallery entry, the binary
+lands in the same git commit as the new markdown file.
 
-If a browser is cleared / a new device is used, the prompt reappears.
+How it works:
+- Each image-widget field in `config.yml` (`pages.hero`, `family.photo`,
+  `gallery.image`, `blog.hero`) sets `media_folder: images` and
+  `public_folder: images`. Per Decap/Sveltia rules, those paths are
+  interpreted **relative to the entry's collection folder**.
+- A photo uploaded for a gallery entry at
+  `site/src/content/gallery/our-yard.md` is committed to
+  `site/src/content/gallery/images/<filename>`, and Sveltia writes
+  `image: images/<filename>` into the frontmatter.
+- That relative path is exactly what Astro's `image()` schema helper accepts
+  in content collections (Astro 6 resolves it relative to the markdown file).
+  At build time, Astro processes the binary through its image pipeline
+  (resize, format conversion, hashing) and emits an optimized asset under
+  `_astro/`.
 
-## Media handling — Path A (native R2)
+The only explicit cost is **repo size**. Image binaries live in git history
+forever. Mitigation:
 
-We chose **Path A: Sveltia's first-class Cloudflare R2 media library**.
+- Compress photos before upload. JPEGs at ~1500-2000 px on the long edge are
+  plenty for web use; aim for under ~1 MB per image, hard ceiling around
+  5 MB. Sveltia commits exactly what you upload.
+- Don't upload original camera files (24 MP RAW or 5 MB+ JPEGs) unless
+  there's a specific need.
+- For one-off oversized images, an editor or maintainer can re-export and
+  re-upload — the old commit lingers in history, but the rendered site uses
+  the latest version.
 
-Why:
-- Sveltia 0.157.1 (the current release as of 2026-04-25) ships an R2 backend
-  with `serviceId: cloudflare_r2` directly in the published bundle. Verified
-  by inspecting `https://unpkg.com/@sveltia/cms@0.157.1/dist/sveltia-cms.mjs`
-  — the relevant code reads `media_libraries.cloudflare_r2` and constructs
-  an S3 endpoint at `https://<account_id>.r2.cloudflarestorage.com`.
-- The browser uploads directly to R2 via the S3-compatible API. No proxy,
-  no extra round-trip through a Worker.
-- Credentials model: the public `access_key_id` lives in `config.yml`; the
-  matching `secret_access_key` is entered through the Sveltia UI on first
-  use and stored only in the browser. The repo never sees the secret.
-- Decap CMS does **not** ship native R2 support, so this is a real Sveltia
-  advantage for our setup.
-
-The `workers/uploads/` presigning Worker is **unused for the moment**. We
-recommend keeping it in the repo: it's a working presigned-URL service that
-matches the same R2 bucket and the same allowlist of GitHub users, so if
-Sveltia introduces a backend-presign mode (Stage 2 of the upstream proposal
-in <https://github.com/sveltia/sveltia-cms/issues/586>) or if we need to
-tighten the model so editors don't hold a long-lived R2 secret in their
-browser, the Worker is ready to plug in.
-
-`media_folder` / `public_folder` are still set in `config.yml` because
-Sveltia requires them, but with `media_libraries.cloudflare_r2` in play, the
-image widget commits R2 URLs directly into markdown rather than writing
-files to `site/public/uploads/`.
+The top-level `media_folder: site/public/uploads` and `public_folder: /uploads`
+in `config.yml` are a fallback for any media inserted via the markdown widget
+(images dropped into a body, not into a structured image field). Anything
+landing there is served as a normal static asset at `/uploads/...`.
 
 ## How to add a new collection
 
@@ -84,11 +82,19 @@ files to `site/public/uploads/`.
    `z.enum([...])` → `widget: select` with `options:`.
 3. Set `folder:` to the path the Astro `glob` loader watches (relative to
    the repo root), `create: true`, and `slug:` to the filename pattern.
+4. For any `widget: image` field, copy the per-field
+   `media_folder: images` / `public_folder: images` pattern used elsewhere
+   in `config.yml` so uploads land next to the markdown rather than in the
+   top-level fallback.
 
 References:
 - Sveltia config: <https://sveltiacms.app/en/docs>
 - Decap-compatible widget reference (Sveltia inherits this):
   <https://decapcms.org/docs/widgets/>
+- Decap media/public folder rules:
+  <https://decapcms.org/docs/configuration-options/#media-and-public-folders>
+- Astro `image()` in content collections:
+  <https://docs.astro.build/en/guides/images/#images-in-content-collections>
 
 ## Limitations / things the editor cannot do via the CMS
 
@@ -113,4 +119,6 @@ The CDN URL in `index.html` is pinned to `@sveltia/cms@0.157.1`. To upgrade:
    and read the changelog for breaking changes (Sveltia is pre-1.0; minor
    versions can include breaking changes).
 2. Update the version in the `<script src="...">` URL.
-3. Hard-refresh `/admin/` and smoke-test login + an edit on each collection.
+3. Hard-refresh `/admin/` and smoke-test login + an edit on each collection,
+   confirming that an image uploaded via the image widget lands at
+   `<collection-folder>/images/<filename>` in the resulting commit.

@@ -32,56 +32,29 @@ display_url: https://sellersadopt.com
 logo_url: /favicon.svg
 
 # ---------------------------------------------------------------------------
-# Media handling — Path A: native Sveltia Cloudflare R2 backend.
+# Media handling — in-repo, per-field.
 #
-# Sveltia 0.157.1 ships first-class R2 support via `media_libraries.cloudflare_r2`
-# (verified in the published bundle: serviceId `cloudflare_r2`, with
-# access_key_id/bucket/account_id required, public_url for serving, and
-# secret_access_key entered through the CMS UI on first use and stored in the
-# editor's browser only — never written to this file).
+# Each image-widget field below sets its own `media_folder` and `public_folder`
+# to `images`, which (per Decap/Sveltia rules) is interpreted RELATIVE TO THE
+# ENTRY'S COLLECTION FOLDER. A photo uploaded for a gallery entry at
+# `site/src/content/gallery/foo.md` is committed to
+# `site/src/content/gallery/images/<filename>`, and Sveltia writes
+# `image: images/<filename>` into the frontmatter — a path relative to the
+# markdown file, which Astro's `image()` schema helper resolves at build time.
 #
-# This means the upload flow is browser → R2 directly via the S3 API. Our
-# `workers/uploads/` presigning Worker is unused for now; it remains in the
-# repo as scaffolding in case we move to the presigned-URL flow later
-# (Sveltia Stage-2 backend-generated presigned URLs, or a security tightening).
+# This replaces the earlier R2-backed flow (Path A). Images now live in git
+# alongside the markdown that references them. Trade-off: the repo grows with
+# image binaries, so editors should compress photos before upload (target
+# < ~5 MB per image, ideally under 1 MB).
 #
-# `media_folder` / `public_folder` are still required by Sveltia even when an
-# external library is in use — they control where in-content image references
-# resolve when an editor inserts an image into markdown. With R2, the image
-# widget returns the R2 `public_url`, so these settings mostly serve as a
-# fallback for the rare in-repo image (e.g. a static page hero committed by
-# an engineer).
+# The top-level `media_folder` / `public_folder` below are a fallback for any
+# media inserted via the markdown widget (not via an image-widget field). They
+# point at `site/public/uploads/` so anything that lands there is served as a
+# normal static asset at `/uploads/...`.
 # ---------------------------------------------------------------------------
 
 media_folder: site/public/uploads
 public_folder: /uploads
-
-media_libraries:
-  cloudflare_r2:
-    # All four values below must match Wave 3 Cloudflare/R2 setup. They are
-    # safe to commit (R2 access_key_id is a public identifier; the secret
-    # access key is entered through the CMS UI by each editor on first use
-    # and stored only in the browser's local storage).
-    #
-    # Update when Wave 3 provisions the bucket and access key:
-    #   - account_id    matches workers/uploads/wrangler.toml's R2_ACCOUNT_ID
-    #   - bucket        matches workers/uploads/wrangler.toml's R2_BUCKET
-    #   - public_url    matches workers/uploads/wrangler.toml's PUBLIC_BASE_URL
-    #                   (e.g. https://uploads.sellersadopt.com)
-    #   - access_key_id is the *id* half of the R2 API token used for
-    #                   browser-side uploads. This can be the same token the
-    #                   Worker uses, or a separate token scoped to the same
-    #                   bucket. The matching SECRET key is entered into the
-    #                   CMS UI by each editor on first use, NOT committed here.
-    account_id: REPLACE_WITH_R2_ACCOUNT_ID
-    bucket: REPLACE_WITH_R2_BUCKET
-    public_url: https://uploads.sellersadopt.com
-    access_key_id: REPLACE_WITH_R2_ACCESS_KEY_ID
-    # Optional path prefix inside the bucket. Mirrors the YYYY/MM/... layout
-    # the uploads Worker would produce, but Sveltia's image widget will use
-    # its own filename, so we keep this as a flat `cms/` namespace to keep
-    # CMS-uploaded media separate from anything the Worker might write later.
-    prefix: cms/
 
 collections:
   - name: pages
@@ -100,7 +73,14 @@ collections:
           step: 1,
         }
       - { name: summary, label: Summary, widget: text, required: false }
-      - { name: hero, label: Hero image, widget: image, required: false }
+      - {
+          name: hero,
+          label: Hero image,
+          widget: image,
+          required: false,
+          media_folder: images,
+          public_folder: images,
+        }
       - { name: body, label: Body, widget: markdown }
 
   - name: family
@@ -128,7 +108,14 @@ collections:
           widget: string,
           hint: "One-line description (e.g., 'Mom, music teacher')",
         }
-      - { name: photo, label: Photo, widget: image, required: false }
+      - {
+          name: photo,
+          label: Photo,
+          widget: image,
+          required: false,
+          media_folder: images,
+          public_folder: images,
+        }
       - { name: order, label: Order, widget: number, value_type: int, step: 1 }
       - { name: body, label: Bio, widget: markdown }
 
@@ -139,7 +126,13 @@ collections:
     slug: '{{slug}}'
     fields:
       - { name: title, label: Title, widget: string }
-      - { name: image, label: Image, widget: image }
+      - {
+          name: image,
+          label: Image,
+          widget: image,
+          media_folder: images,
+          public_folder: images,
+        }
       - {
           name: alt,
           label: Alt text,
@@ -169,5 +162,12 @@ collections:
       - { name: title, label: Title, widget: string }
       - { name: date, label: Date, widget: datetime }
       - { name: summary, label: Summary, widget: text, required: false }
-      - { name: hero, label: Hero image, widget: image, required: false }
+      - {
+          name: hero,
+          label: Hero image,
+          widget: image,
+          required: false,
+          media_folder: images,
+          public_folder: images,
+        }
       - { name: body, label: Body, widget: markdown }
