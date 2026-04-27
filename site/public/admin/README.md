@@ -4,6 +4,16 @@ This directory is the static admin SPA for editing site content. Astro copies
 `public/` verbatim into `dist/` at build time, so it's available in production
 at `https://sellersadopt.com/admin/`.
 
+> **Status:** the admin shell is built, but **uploads will not work in production
+> until Wave 3 setup completes** — the R2 placeholders in `config.yml` need to
+> be replaced with the live bucket details, and the auth Worker needs to be
+> deployed with its GitHub OAuth secrets. See `SETUP.md` at the repo root.
+
+> **Local dev quirk:** Astro's dev server doesn't auto-resolve `/admin/` to
+> `/admin/index.html`. When testing in `npm run dev`, visit
+> `http://localhost:4321/admin/index.html` directly. Production (Cloudflare
+> Pages) handles directory index requests correctly, so `/admin/` works there.
+
 ## What's here
 
 - `index.html` — loads Sveltia CMS from a CDN (pinned version).

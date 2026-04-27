@@ -2,7 +2,7 @@
 name: E
 role: child
 age: 10
-traits: "Big sister (10), curious and kind"
+traits: "Big sister, curious and kind"
 order: 3
 ---
 

@@ -4,8 +4,13 @@
 # Sveltia is config-compatible with Decap CMS, so Decap docs also apply:
 # https://decapcms.org/docs/configuration-options/
 #
-# Field shapes here MUST mirror site/src/content.config.ts exactly. If you
-# change one, change the other.
+# Field shapes here must mirror site/src/content.config.ts. If you change one,
+# change the other.
+#
+# Known exception: the markdown body. In Astro, body is implicit (everything
+# after the frontmatter); in Sveltia/Decap, you declare it as a `widget: markdown`
+# field — conventionally named `body`. There is no matching Zod field for it,
+# and that's correct.
 
 backend:
   name: github

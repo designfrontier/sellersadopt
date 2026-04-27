@@ -2,7 +2,7 @@
 name: C
 role: child
 age: 6
-traits: "Little brother (6), full of wonder"
+traits: "Little brother, full of wonder"
 order: 4
 ---
 

@@ -86,7 +86,9 @@ const family = (await getCollection('family')).sort(
                 Photo
               </div>
             )}
-            <h3 class="font-serif text-lg text-warm-800">{member.data.name}</h3>
+            <h3 class="font-serif text-lg text-warm-800">
+              {member.data.name}{member.data.age != null ? `, ${member.data.age}` : ''}
+            </h3>
             <p class="text-sm text-warm-600 mt-1">{member.data.traits}</p>
           </div>
         ))}
