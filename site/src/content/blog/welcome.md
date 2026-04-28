@@ -1,7 +1,7 @@
 ---
-title: "Welcome to our journey"
+title: Welcome to our journey
 date: 2026-04-26
-summary: "A first note from us — what this site is, why we're here, and what comes next."
+summary: A first note from us — what this site is, why we're here, and what comes next.
 ---
 
 Hi, and thanks for stopping by.
