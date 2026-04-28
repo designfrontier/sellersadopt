@@ -8,24 +8,14 @@
   </head>
   <body>
     <!--
-      Sveltia CMS loader.
+      Sveltia CMS loader. Pinned to a specific version so the admin UI is
+      reproducible — bump deliberately.
 
-      Pinned to a specific version (rather than `@latest`) so the admin UI is
-      reproducible and a surprise upstream release can't break editing for
-      Daniel & Katie. Bump deliberately.
-
-      Sveltia ships an ES module (`./dist/sveltia-cms.mjs`); the package's
-      `main`/`module`/`exports` all point at the .mjs file, so `type="module"`
-      is required. The `.js` URL on unpkg redirects to the `.mjs`. We use the
-      explicit `.mjs` to avoid the redirect.
-
-      Why Sveltia over Decap: Sveltia is config-compatible with Decap CMS,
-      ships first-class Cloudflare R2 media library support (Decap does not),
-      and is actively maintained. See `./README.md`.
+      Use the UMD bundle (`sveltia-cms.js`), not the ES module (`.mjs`). Only
+      the UMD build auto-bootstraps: it fetches `config.yml` from this
+      directory and mounts the app. Loading the `.mjs` with `type="module"`
+      results in a silent white screen (no config fetch, no error).
     -->
-    <script
-      type="module"
-      src="https://unpkg.com/@sveltia/cms@0.157.1/dist/sveltia-cms.mjs"
-    ></script>
+    <script src="https://unpkg.com/@sveltia/cms@0.157.1/dist/sveltia-cms.js"></script>
   </body>
 </html>
