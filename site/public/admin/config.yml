@@ -15,7 +15,7 @@
 backend:
   name: github
   # Update if repo is renamed or transferred.
-  repo: designfrontier/adoption
+  repo: designfrontier/sellersadopt
   branch: main
   # OAuth handshake is performed by the auth Worker (see workers/auth/).
   # Sveltia/Decap appends `/auth` to base_url when opening the popup, which
