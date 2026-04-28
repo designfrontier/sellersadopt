@@ -14,8 +14,8 @@ const pages = defineCollection({
     z.object({
       title: z.string(),
       order: z.number(),
-      summary: z.string().optional(),
-      hero: image().optional(),
+      summary: z.string().nullable().optional(),
+      hero: image().nullable().optional(),
     }),
 });
 
@@ -28,9 +28,9 @@ const family = defineCollection({
     z.object({
       name: z.string(),
       role: z.enum(['parent', 'child', 'pet']),
-      age: z.number().optional(),
+      age: z.number().nullable().optional(),
       traits: z.string(),
-      photo: image().optional(),
+      photo: image().nullable().optional(),
       order: z.number(),
     }),
 });
@@ -51,9 +51,9 @@ const gallery = defineCollection({
       title: z.string(),
       image: image(),
       alt: z.string(),
-      caption: z.string().optional(),
-      takenAt: z.coerce.date().optional(),
-      season: z.enum(['spring', 'summer', 'fall', 'winter']).optional(),
+      caption: z.string().nullable().optional(),
+      takenAt: z.coerce.date().nullable().optional(),
+      season: z.enum(['spring', 'summer', 'fall', 'winter']).nullable().optional(),
     }),
 });
 
@@ -67,8 +67,8 @@ const blog = defineCollection({
     z.object({
       title: z.string(),
       date: z.coerce.date(),
-      summary: z.string().optional(),
-      hero: image().optional(),
+      summary: z.string().nullable().optional(),
+      hero: image().nullable().optional(),
     }),
 });
 
