@@ -17,4 +17,4 @@ compatibility_date = "2026-04-01"
 # ---------------------------------------------------------------------------
 
 [vars]
-ALLOWED_GITHUB_USERS = ""
+ALLOWED_GITHUB_USERS = "designfrontier,ktbs296-boop"
