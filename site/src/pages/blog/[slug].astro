@@ -30,37 +30,42 @@ const dateFmt = new Intl.DateTimeFormat('en-US', {
   title={`${post.data.title} | The Sellers Family`}
   description={post.data.summary ?? 'A post from the Sellers family adoption journey.'}
 >
-  <article class="max-w-3xl mx-auto px-4 py-16">
-    <a
-      href="/blog"
-      class="inline-block text-sage-600 hover:text-sage-700 text-sm mb-6"
-    >
-      &larr; Back to all posts
-    </a>
-
-    <header class="mb-10">
-      <time class="text-warm-400 text-sm" datetime={post.data.date.toISOString()}>
+  <header class="border-b border-brass-500/30">
+    <div class="max-w-5xl mx-auto px-6 py-16 md:py-20">
+      <a
+        href="/blog"
+        class="inline-block font-heading text-xs uppercase tracking-[0.3em] text-brass-600 hover:text-sky-600 transition-colors mb-6"
+      >
+        &larr; All Posts
+      </a>
+      <time class="block font-heading text-xs uppercase tracking-[0.3em] text-brass-600 mb-4" datetime={post.data.date.toISOString()}>
         {dateFmt.format(post.data.date)}
       </time>
-      <h1 class="font-serif text-3xl md:text-4xl text-warm-800 mt-2 mb-4">
+      <h1 class="font-display text-5xl md:text-6xl font-bold uppercase leading-[0.95] text-warm-800 tracking-tight">
         {post.data.title}
       </h1>
       {post.data.summary && (
-        <p class="text-warm-600 leading-relaxed">{post.data.summary}</p>
+        <p class="mt-6 text-lg text-warm-700 leading-relaxed font-light max-w-2xl">
+          {post.data.summary}
+        </p>
       )}
-    </header>
+    </div>
+  </header>
 
-    {post.data.hero && (
-      <div class="mb-10">
+  {post.data.hero && (
+    <div class="max-w-5xl mx-auto px-6 pt-12">
+      <div class="border-4 border-brass-500 overflow-hidden">
         <Image
           src={post.data.hero}
           alt={post.data.title}
-          class="w-full h-auto rounded-2xl"
+          class="w-full h-auto block"
         />
       </div>
-    )}
+    </div>
+  )}
 
-    <div class="prose prose-warm max-w-none text-warm-700 leading-relaxed">
+  <article class="max-w-5xl mx-auto px-6 py-16">
+    <div class="prose prose-warm max-w-3xl text-warm-800 leading-relaxed text-lg font-light">
       <Content />
     </div>
   </article>

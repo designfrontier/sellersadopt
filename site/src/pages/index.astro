@@ -1,137 +1,177 @@
 ---
-import { getCollection } from 'astro:content';
+import { getCollection, getEntry } from 'astro:content';
 import { Image } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
 
-// Family-at-a-glance cards: pulled from the `family` collection,
-// sorted by `order`. Hero/intro/openness copy stays inline (decision:
-// homepage marketing copy is short and tightly tied to layout, so
-// moving it into `pages` entries was deemed not worth the extra
-// indirection for a 1-page site).
 const family = (await getCollection('family')).sort(
   (a, b) => a.data.order - b.data.order,
 );
+
+// Hero image is editable in Sveltia via the "Home" entry in
+// Marketing pages. Only the `hero` field is used on the homepage.
+const home = await getEntry('pages', 'home');
+const heroImage = home?.data.hero;
 ---
 
 <Layout>
-  <!-- Hero -->
-  <section class="relative bg-sage-50">
-    <div class="max-w-5xl mx-auto px-4 py-16 md:py-24 text-center">
-      <!-- Replace with your family photo -->
-      <div class="w-full max-w-2xl mx-auto aspect-[3/2] bg-warm-200 rounded-2xl mb-8 flex items-center justify-center text-warm-400">
-        <p class="text-sm">Your family photo here</p>
+  <!-- Hero: forest field, asymmetric type-left/photo-right.
+       Cream type on forest, persimmon underline pops, brass-edged photo. -->
+  <section class="bg-sage-600 text-warm-50">
+    <div class="max-w-6xl mx-auto px-6 py-20 md:py-28 grid md:grid-cols-12 gap-10 md:gap-14 items-start">
+      <div class="md:col-span-7">
+        <p class="font-heading text-xs uppercase tracking-[0.3em] text-sky-300 mb-5">
+          Holladay &middot; Utah
+        </p>
+        <h1 class="font-display text-6xl md:text-7xl lg:text-8xl font-bold uppercase leading-[0.92] text-warm-50 tracking-tight">
+          We're the<br/>
+          <span class="relative inline-block pb-2">
+            Sellers
+            <span class="absolute left-0 bottom-0 h-[8px] w-full bg-sky-500"></span>
+          </span>
+        </h1>
+        <p class="mt-10 text-lg md:text-xl text-warm-100 leading-relaxed font-light max-w-xl">
+          A family of four hoping to welcome one more
+          through open adoption. Loud kitchen, full table,
+          always room for more.
+        </p>
+        <div class="mt-10 flex flex-col sm:flex-row gap-3">
+          <a href="/letter" class="inline-block px-7 py-3 bg-warm-50 text-sage-700 font-heading font-medium uppercase tracking-widest text-sm border border-warm-50 hover:bg-brass-300 hover:border-brass-300 transition-colors">
+            Read Our Letter
+          </a>
+          <a href="/contact" class="inline-block px-7 py-3 bg-transparent text-warm-50 font-heading font-medium uppercase tracking-widest text-sm border border-brass-400 hover:bg-brass-400/15 transition-colors">
+            Get in Touch
+          </a>
+        </div>
       </div>
-      <h1 class="font-serif text-4xl md:text-5xl text-warm-800 mb-4">
-        We're the Sellers
-      </h1>
-      <p class="text-lg md:text-xl text-warm-600 max-w-2xl mx-auto leading-relaxed">
-        A family of four in Holladay, Utah, hoping to welcome one more
-        through open adoption.
-      </p>
-      <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-        <a href="/letter" class="inline-block px-6 py-3 bg-sage-600 text-white rounded-lg font-medium hover:bg-sage-700 transition-colors">
-          Read Our Letter
-        </a>
-        <a href="/contact" class="inline-block px-6 py-3 bg-warm-200 text-warm-800 rounded-lg font-medium hover:bg-warm-300 transition-colors">
-          Get in Touch
-        </a>
+      <div class="md:col-span-5">
+        <div class="aspect-[3/4] md:aspect-[4/5] w-full bg-warm-200 border-4 border-brass-500 overflow-hidden flex items-center justify-center text-warm-500 font-heading text-sm uppercase tracking-widest">
+          {heroImage ? (
+            <Image
+              src={heroImage}
+              alt="The Sellers family"
+              class="w-full h-full object-cover"
+            />
+          ) : (
+            <span>Family photo</span>
+          )}
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Quick intro -->
-  <section class="max-w-4xl mx-auto px-4 py-16">
-    <div class="grid md:grid-cols-2 gap-12 items-center">
-      <div>
-        <h2 class="font-serif text-2xl md:text-3xl text-warm-800 mb-4">
-          A little about us
+  <!-- About strip: clean two-column, walnut type, brass divider. -->
+  <section class="max-w-6xl mx-auto px-6 py-20">
+    <div class="grid md:grid-cols-12 gap-10 items-start">
+      <div class="md:col-span-5">
+        <p class="font-heading text-xs uppercase tracking-[0.3em] text-brass-600 mb-3">
+          About
+        </p>
+        <h2 class="font-display text-4xl md:text-5xl uppercase font-bold text-warm-800 leading-[0.95]">
+          A little<br/>about us
         </h2>
-        <p class="text-warm-700 leading-relaxed mb-4">
+      </div>
+      <div class="md:col-span-7 space-y-4 text-warm-700 leading-relaxed">
+        <p>
           We're Daniel and Katie. We live in Holladay, Utah with our two
-          kids — E (10) and C (6). Our house is loud, full of laughter,
+          kids, E (10) and C (6). Our house is loud, full of laughter,
           and there's always room at the table.
         </p>
-        <p class="text-warm-700 leading-relaxed">
+        <p>
           We believe in open adoption and are excited to build a
           relationship with a birth family. We know this is a deeply
           personal decision, and we respect your journey completely.
         </p>
-        <a href="/about" class="inline-block mt-4 text-sage-600 font-medium hover:text-sage-700 transition-colors">
+        <a href="/about" class="inline-block mt-2 font-heading text-sm uppercase tracking-widest text-sky-600 hover:text-sky-700 border-b border-sky-500/40 pb-1">
           Learn more about us &rarr;
         </a>
-      </div>
-      <div class="aspect-square bg-warm-200 rounded-2xl flex items-center justify-center text-warm-400">
-        <p class="text-sm">Family photo</p>
       </div>
     </div>
   </section>
 
-  <!-- Family at a glance — driven by the `family` content collection -->
-  <section class="bg-warm-100 py-16">
-    <div class="max-w-4xl mx-auto px-4">
-      <h2 class="font-serif text-2xl md:text-3xl text-warm-800 mb-8 text-center">
-        Our family at a glance
-      </h2>
-      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+  <!-- Family at a glance — horizontal portrait row, no white card chrome.
+       Walnut frames around photos, names in display caps below. -->
+  <section class="bg-warm-100 border-y border-brass-500/30 py-20">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="flex items-baseline justify-between mb-12 flex-wrap gap-4">
+        <div>
+          <p class="font-heading text-xs uppercase tracking-[0.3em] text-brass-600 mb-2">
+            The Family
+          </p>
+          <h2 class="font-display text-4xl md:text-5xl uppercase font-bold text-warm-800 leading-[0.95]">
+            Four of us<br/>(soon five)
+          </h2>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
         {family.map((member) => (
-          <div class="bg-white rounded-xl p-6 text-center">
-            {member.data.photo ? (
-              <Image
-                src={member.data.photo}
-                alt={`Photo of ${member.data.name}`}
-                class="w-20 h-20 rounded-full mx-auto mb-3 object-cover"
-              />
-            ) : (
-              <div class="w-20 h-20 rounded-full bg-sage-100 mx-auto mb-3 flex items-center justify-center text-sage-400 text-xs">
-                Photo
-              </div>
-            )}
-            <h3 class="font-serif text-lg text-warm-800">
-              {member.data.name}{member.data.age != null ? `, ${member.data.age}` : ''}
+          <div>
+            <div class="aspect-square w-full bg-warm-200 border-2 border-warm-700 mb-4 overflow-hidden">
+              {member.data.photo ? (
+                <Image
+                  src={member.data.photo}
+                  alt={`Photo of ${member.data.name}`}
+                  class="w-full h-full object-cover"
+                />
+              ) : (
+                <div class="w-full h-full flex items-center justify-center text-warm-500 font-heading text-xs uppercase tracking-widest">
+                  Photo
+                </div>
+              )}
+            </div>
+            <h3 class="font-display text-xl uppercase font-bold text-warm-800 tracking-wide">
+              {member.data.name}{member.data.age != null ? <span class="text-sky-500">, {member.data.age}</span> : null}
             </h3>
-            <p class="text-sm text-warm-600 mt-1">{member.data.traits}</p>
+            <p class="text-sm text-warm-700 mt-1 font-light leading-relaxed">{member.data.traits}</p>
           </div>
         ))}
       </div>
     </div>
   </section>
 
-  <!-- Open adoption commitment -->
-  <section class="max-w-3xl mx-auto px-4 py-16 text-center">
-    <h2 class="font-serif text-2xl md:text-3xl text-warm-800 mb-4">
-      Our promise of openness
-    </h2>
-    <p class="text-warm-700 leading-relaxed mb-6">
-      We believe open adoption is best for everyone — especially the child.
-      We're committed to building a genuine, lasting relationship with you.
-      That means regular updates, photos, video calls, and visits as we
-      navigate this together.
-    </p>
-    <a href="/letter" class="inline-block px-6 py-3 bg-sage-600 text-white rounded-lg font-medium hover:bg-sage-700 transition-colors">
-      Read Our Full Letter
-    </a>
+  <!-- Open adoption commitment — deep walnut panel, warm intimate counterpoint
+       to the forest hero. Persimmon accent on the headline tail. -->
+  <section class="bg-warm-800 text-warm-50 py-20">
+    <div class="max-w-3xl mx-auto px-6">
+      <p class="font-heading text-xs uppercase tracking-[0.3em] text-brass-400 mb-3">
+        Our Commitment
+      </p>
+      <h2 class="font-display text-4xl md:text-5xl uppercase font-bold leading-[0.95] mb-6">
+        Our promise<br/>
+        <span class="text-sky-400">of openness</span>
+      </h2>
+      <p class="text-lg text-warm-100 leading-relaxed font-light mb-8">
+        We believe open adoption is best for everyone, especially the child.
+        We're committed to building a genuine, lasting relationship with you.
+        That means regular updates, photos, video calls, and visits as we
+        navigate this together.
+      </p>
+      <a href="/letter" class="inline-block px-6 py-3 bg-warm-50 text-warm-800 font-heading font-medium uppercase tracking-widest text-sm border border-warm-50 hover:bg-brass-300 hover:border-brass-300 transition-colors">
+        Read Our Full Letter
+      </a>
+    </div>
   </section>
 
-  <!-- Contact CTA — info directly on homepage (real contact details, kept static) -->
-  <section class="bg-sage-50 py-16">
-    <div class="max-w-3xl mx-auto px-4 text-center">
-      <h2 class="font-serif text-2xl md:text-3xl text-warm-800 mb-4">
-        We'd love to hear from you
-      </h2>
-      <p class="text-warm-700 leading-relaxed mb-6">
-        Whether you have questions, want to learn more about our family,
-        or just want to say hello — we're here. No pressure, no judgment.
+  <!-- Contact CTA — back to cream, sky accent. -->
+  <section class="py-20">
+    <div class="max-w-4xl mx-auto px-6 text-center">
+      <p class="font-heading text-xs uppercase tracking-[0.3em] text-brass-600 mb-3">
+        Hello
       </p>
-      <div class="flex flex-col sm:flex-row gap-6 justify-center items-center text-warm-700">
-        <a href="tel:+18019300358" class="hover:text-sage-600 transition-colors">
+      <h2 class="font-display text-4xl md:text-5xl uppercase font-bold text-warm-800 leading-[0.95] mb-6">
+        We'd love to<br/>hear from you
+      </h2>
+      <p class="text-warm-700 leading-relaxed mb-10 max-w-xl mx-auto">
+        Whether you have questions, want to learn more about our family,
+        or just want to say hello. We're here. No pressure, no judgment.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-x-10 gap-y-4 justify-center items-center font-heading text-sm uppercase tracking-widest">
+        <a href="tel:+18019300358" class="text-warm-800 hover:text-sky-600 transition-colors border-b border-brass-500/40 pb-1">
           (801) 930-0358
         </a>
-        <span class="hidden sm:inline text-warm-300">|</span>
-        <a href="mailto:hello@sellersadopt.com" class="hover:text-sage-600 transition-colors">
+        <a href="mailto:hello@sellersadopt.com" class="text-warm-800 hover:text-sky-600 transition-colors border-b border-brass-500/40 pb-1">
           hello@sellersadopt.com
         </a>
-        <span class="hidden sm:inline text-warm-300">|</span>
-        <a href="https://instagram.com/sellersadopt" class="hover:text-sage-600 transition-colors" target="_blank" rel="noopener">
+        <a href="https://instagram.com/sellersadopt" class="text-warm-800 hover:text-sky-600 transition-colors border-b border-brass-500/40 pb-1" target="_blank" rel="noopener">
           @sellersadopt
         </a>
       </div>

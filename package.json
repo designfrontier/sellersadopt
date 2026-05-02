@@ -1,0 +1,19 @@
+{
+  "name": "sellersadopt-tooling",
+  "private": true,
+  "description": "Repo-root dev tooling: pre-commit image optimization for content uploads.",
+  "scripts": {
+    "prepare": "husky",
+    "optimize-image": "node scripts/optimize-image.mjs"
+  },
+  "lint-staged": {
+    "site/src/content/**/*.{jpg,jpeg,png,JPG,JPEG,PNG}": [
+      "node scripts/optimize-image.mjs"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "sharp": "^0.33.5"
+  }
+}

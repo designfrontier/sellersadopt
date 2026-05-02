@@ -1,39 +1,63 @@
 @import "tailwindcss";
 
+/*
+ * Eames-house-inspired palette: walnut, brass, forest, persimmon on a warm
+ * cream field. Token names retained from the original design system so existing
+ * pages (about, letter, contact, blog, pictures) pick up the new colors with
+ * no markup edits — `warm-*` is the cream-to-walnut warm scale, `sage-*` is
+ * deep forest, `sky-*` is persimmon. `brass-*` is the new metallic accent.
+ *
+ * Fonts (Google Fonts free substitutes for Neutraface + Söhne): Big Shoulders
+ * Display for top-of-page display, Josefin Sans for headings/UI, Inter for
+ * body. `font-serif` aliases to Josefin so existing `font-serif` headings keep
+ * working without per-file edits.
+ */
+
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-serif: 'Lora', Georgia, serif;
+  --font-display: 'Big Shoulders Display', 'Inter', sans-serif;
+  --font-heading: 'Josefin Sans', 'Inter', sans-serif;
+  --font-serif: 'Josefin Sans', 'Inter', sans-serif;
 
-  --color-warm-50: #fdf8f6;
-  --color-warm-100: #f2e8e5;
-  --color-warm-200: #eaddd7;
-  --color-warm-300: #e0cec7;
-  --color-warm-400: #d2bab0;
-  --color-warm-500: #bfa094;
-  --color-warm-600: #a18072;
-  --color-warm-700: #977669;
-  --color-warm-800: #846358;
-  --color-warm-900: #6f544a;
+  /* Warm: cream → walnut */
+  --color-warm-50:  #f6efe2;
+  --color-warm-100: #ede3d0;
+  --color-warm-200: #d8c4a3;
+  --color-warm-300: #b8956a;
+  --color-warm-400: #8a6845;
+  --color-warm-500: #6b4a2e;
+  --color-warm-600: #543822;
+  --color-warm-700: #3d2818;
+  --color-warm-800: #2e1d12;
+  --color-warm-900: #1f140c;
 
-  --color-sage-50: #f6f7f4;
-  --color-sage-100: #e8ebe3;
-  --color-sage-200: #d4d9cb;
-  --color-sage-300: #b5bda8;
-  --color-sage-400: #95a083;
-  --color-sage-500: #7a8768;
-  --color-sage-600: #606c52;
-  --color-sage-700: #4c5642;
-  --color-sage-800: #3f4637;
-  --color-sage-900: #353b2f;
+  /* Sage: deep forest green (Eames-panel green) */
+  --color-sage-50:  #e8ede9;
+  --color-sage-100: #c8d3cb;
+  --color-sage-200: #9eb0a3;
+  --color-sage-300: #748d7b;
+  --color-sage-400: #506a59;
+  --color-sage-500: #3a4f43;
+  --color-sage-600: #2d4a3e;
+  --color-sage-700: #234035;
+  --color-sage-800: #1e352c;
+  --color-sage-900: #182a23;
 
-  --color-sky-50: #f0f7fa;
-  --color-sky-100: #daedf4;
-  --color-sky-200: #b8dce9;
-  --color-sky-300: #87c4d9;
-  --color-sky-400: #5ba9c5;
-  --color-sky-500: #3d8fad;
-  --color-sky-600: #357592;
-  --color-sky-700: #2f6078;
-  --color-sky-800: #2c5064;
-  --color-sky-900: #294454;
+  /* Sky: persimmon (deep red-orange Eames accent) */
+  --color-sky-50:  #fbe8e0;
+  --color-sky-100: #f4c8b5;
+  --color-sky-200: #e9a384;
+  --color-sky-300: #de8056;
+  --color-sky-400: #d26339;
+  --color-sky-500: #c54a2c;
+  --color-sky-600: #ab3d24;
+  --color-sky-700: #8c321d;
+  --color-sky-800: #6c2616;
+  --color-sky-900: #4d1b10;
+
+  /* Brass: warm metallic accent for borders, dividers, small highlights */
+  --color-brass-300: #d4b785;
+  --color-brass-400: #c2a26c;
+  --color-brass-500: #b08a4e;
+  --color-brass-600: #927238;
 }

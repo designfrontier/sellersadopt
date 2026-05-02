@@ -12,36 +12,45 @@ const gallery = (await getCollection('gallery')).sort((a, b) => {
 
 <Layout
   title="Pictures | The Sellers Family"
-  description="A peek into our life — the Sellers family in Holladay, Utah."
+  description="A peek into our life with the Sellers family in Holladay, Utah."
 >
-  <section class="max-w-5xl mx-auto px-4 py-16">
-    <h1 class="font-serif text-3xl md:text-4xl text-warm-800 mb-4 text-center">
-      A peek into our life
-    </h1>
-    <p class="text-warm-600 text-center max-w-2xl mx-auto mb-12">
-      Just some of our favorite moments.
-    </p>
+  <header class="border-b border-brass-500/30">
+    <div class="max-w-5xl mx-auto px-6 py-16 md:py-20">
+      <p class="font-heading text-xs uppercase tracking-[0.3em] text-brass-600 mb-4">
+        Pictures
+      </p>
+      <h1 class="font-display text-5xl md:text-6xl font-bold uppercase leading-[0.95] text-warm-800 tracking-tight">
+        A Peek Into <span class="relative inline-block pb-1">Our Life<span class="absolute left-0 bottom-0 h-[6px] w-full bg-sky-500"></span></span>
+      </h1>
+      <p class="mt-6 text-lg text-warm-700 leading-relaxed font-light max-w-2xl">
+        Just some of our favorite moments.
+      </p>
+    </div>
+  </header>
 
+  <section class="max-w-6xl mx-auto px-6 py-16">
     {gallery.length === 0 ? (
       <div class="text-center py-16">
-        <p class="text-warm-600 text-lg">
-          Photos coming soon — we're putting these together.
+        <p class="text-warm-700 text-lg font-light">
+          Photos coming soon. We're putting these together.
         </p>
       </div>
     ) : (
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
         {gallery.map((item) => (
           <figure>
-            <Image
-              src={item.data.image}
-              alt={item.data.alt}
-              class="aspect-square w-full h-auto object-cover rounded-xl"
-            />
+            <div class="aspect-square w-full bg-warm-200 border-2 border-warm-700 overflow-hidden">
+              <Image
+                src={item.data.image}
+                alt={item.data.alt}
+                class="w-full h-full object-cover"
+              />
+            </div>
             {(item.data.caption || item.data.season) && (
-              <figcaption class="text-warm-600 text-xs mt-2 flex items-center gap-2">
+              <figcaption class="text-warm-700 text-sm mt-3 flex items-center gap-3 font-light">
                 {item.data.caption && <span>{item.data.caption}</span>}
                 {item.data.season && (
-                  <span class="inline-block px-2 py-0.5 rounded-full bg-warm-100 text-warm-500 text-[10px] uppercase tracking-wide">
+                  <span class="font-heading text-[10px] uppercase tracking-widest text-brass-600">
                     {item.data.season}
                   </span>
                 )}
