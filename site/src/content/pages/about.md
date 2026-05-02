@@ -5,7 +5,7 @@ summary: A little about Daniel, Katie, and our family in Holladay, Utah.
 hero: images/0R8A6976.jpg
 ---
 
-We're Daniel and Katie. We live in Holladay, Utah with our two kids — E (10)
+We're Daniel and Katie. We live in Holladay, Utah with our two kids: E (10)
 and C (6). Our house is creative, full of laughter, and there's always room at the table.
 
 We believe in open adoption and are excited to build a relationship with a

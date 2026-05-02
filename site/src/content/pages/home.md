@@ -1,7 +1,7 @@
 ---
 title: Home
 order: 0
-summary: Hero image for the homepage. Title and body are not displayed on the homepage — only the hero image is read.
+summary: Hero image for the homepage. Title and body are not displayed on the homepage. Only the hero image is read.
 hero: images/0R8A6976.jpg
 ---
 
