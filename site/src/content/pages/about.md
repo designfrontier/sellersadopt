@@ -2,6 +2,7 @@
 title: About Us
 order: 1
 summary: A little about Daniel, Katie, and our family in Holladay, Utah.
+hero: images/0R8A6976.jpg
 ---
 
 We're Daniel and Katie. We live in Holladay, Utah with our two kids — E (10)
