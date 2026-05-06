@@ -1,10 +1,10 @@
 ---
 title: Our home
 order: 2
-summary: A glimpse of our home and community in Holladay, Utah, nestled against the Wasatch Mountains.
+summary: A glimpse of our home and community near Salt Lake City, Utah, nestled against the Wasatch Mountains.
 ---
 
-We live in Holladay, Utah, a family-friendly community nestled against
+We live near Salt Lake City, Utah, in a family-friendly community nestled against
 the Wasatch Mountains with great schools, parks, and neighbors.
 
 ## What we love about our home
@@ -14,7 +14,7 @@ evenings you'll find us cooking, doing homework at the counter, or just
 talking about the day. The backyard catches afternoon sun, and there's a
 treehouse in progress that may never quite be finished.
 
-## Life in Holladay
+## Life near Salt Lake City
 
 The Wasatch Mountains are in our backyard. We hike, ski, and spend as
 much time outside as we can. Holladay has excellent schools, a real
